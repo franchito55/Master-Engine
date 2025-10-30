@@ -109,8 +109,15 @@ bool ModuleD3D12::init() {
 }
 
 void ModuleD3D12::preRender() {
+
+
+	// preRender de ModuleEditor
+	
+
+
 	// Get the current back buffer index
 	currentBackBufferIndex = swapChain->GetCurrentBackBufferIndex();
+
 
 	// Wait for the GPU to finish
 	WaitForFence(fenceValues[currentBackBufferIndex]);
@@ -120,15 +127,15 @@ void ModuleD3D12::preRender() {
 
 	// Reset the command list -> sets it to recording state
 	commandLists[currentBackBufferIndex]->Reset(commandAllocators[currentBackBufferIndex].Get(), nullptr);
+
+	// Set the usage state of the current buffer to RENDER_TARGET
+	barrier = CD3DX12_RESOURCE_BARRIER::Transition(buffers[currentBackBufferIndex].Get(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, D3D12_RESOURCE_BARRIER_FLAG_NONE);
+	commandLists[currentBackBufferIndex]->ResourceBarrier(1, &barrier);
 }
 
 void ModuleD3D12::render() {
-	// Record commands. This involves:
-	// 1.Set the usage state of the current buffer to RENDER_TARGET
-	CD3DX12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition(buffers[currentBackBufferIndex].Get(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, D3D12_RESOURCE_BARRIER_FLAG_NONE);
-	commandLists[currentBackBufferIndex]->ResourceBarrier(1, &barrier);
-
-	// 2. Record the actual commands (Reset, Draw, etc.)
+	
+	// Record the actual commands (Reset, Draw, etc.)
 	float fV = fenceValue % 720;
 	if (fV > 120 && fV < 240) {
 		red -= 1.0f / 120;
@@ -152,22 +159,24 @@ void ModuleD3D12::render() {
 	}
 
 	float color[4] = { red, green, blue, 1.0f };
+	//float color[4] = { 1.0f, 0.0f, 0.0f, 1.0f };
 	commandLists[currentBackBufferIndex]->ClearRenderTargetView(rtvDescriptorHandles[currentBackBufferIndex], color, 0, nullptr);
+}
 
-	// 3. Transition back to PRESENT
+void ModuleD3D12::postRender() {
+
+	// Transition back to PRESENT
 	barrier = CD3DX12_RESOURCE_BARRIER::Transition(buffers[currentBackBufferIndex].Get(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, D3D12_RESOURCE_BARRIER_FLAG_NONE);
 	commandLists[currentBackBufferIndex]->ResourceBarrier(1, &barrier);
 
 	// Close list and execute command list
 	commandLists[currentBackBufferIndex]->Close();
-	ID3D12CommandList* lists[] = { commandLists[currentBackBufferIndex].Get()};
+	ID3D12CommandList* lists[] = { commandLists[currentBackBufferIndex].Get() };
 	commandQueue->ExecuteCommandLists(1, lists);
 
 	// Present
 	swapChain->Present(1, 0);
-}
 
-void ModuleD3D12::postRender() {
 	// This tells the GPU to set the fence's value to what you pass
 	commandQueue->Signal(fence.Get(), ++fenceValue);
 	currentBackBufferIndex = swapChain->GetCurrentBackBufferIndex();

@@ -17,6 +17,8 @@
 #include <d3d12.h>
 #include "d3dx12.h"
 #include <dxgi1_6.h>
+#include "3rdParty/imgui-docking/backends/imgui_impl_win32.h"
+#include "3rdParty/imgui-docking/backends/imgui_impl_dx12.h"
 
 #include "SimpleMath.h"
 

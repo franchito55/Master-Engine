@@ -84,9 +84,6 @@ void ImGuiPass::startFrame()
     ImGui_ImplWin32_NewFrame();
 
     ImGui::NewFrame();
-
-    // imgui commands
-    //ImGui::ShowDemoWindow();
 }
 
 void ImGuiPass::record(ID3D12GraphicsCommandList* commandList)

@@ -2,6 +2,8 @@
 #include "Globals.h"
 #include "Module.h"
 
+class ImGuiPass;
+
 #define FRAME_BUFFER_NUM 2
 #define COLOR_CHANGE_RATE_CYCLE 120
 
@@ -13,6 +15,8 @@ public:
 	void preRender() override;
 	void postRender() override;
 	void WaitForFence(unsigned int fenceValue);
+	ComPtr<ID3D12Device2> getDevice() const { return device; }
+	ComPtr<ID3D12GraphicsCommandList> getCurrentBufferCommandList() const { return commandLists[currentBackBufferIndex]; }
 private:
 	HWND hWnd;
 	ComPtr<IDXGIAdapter4> adapter;
@@ -32,4 +36,6 @@ private:
 	float red = 1.0f;
 	float green = 0.0f;
 	float blue = 0.0f;
+	// 1.Set the usage state of the current buffer to RENDER_TARGET
+	CD3DX12_RESOURCE_BARRIER barrier = {};
 };

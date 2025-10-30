@@ -39,6 +39,12 @@ private:
     uint64_t  tickSum = 0;
     uint64_t  elapsedMilis = 0;
     bool      paused = false;
+
+    unsigned int initOrder[3] = { 0, 1, 2 };
+    unsigned int updateOrder[3] = { 0, 1, 2 };
+    unsigned int preRenderOrder[3] = { 0, 2, 1 };
+    unsigned int renderOrder[3] = { 0, 1, 2 };
+    unsigned int postRenderOrder[3] = { 0, 1, 2 };
 };
 
 extern Application* app;
