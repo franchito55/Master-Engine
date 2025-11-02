@@ -1,5 +1,6 @@
 #include "Globals.h"
 #include "ModuleD3D12.h"
+#include "ImGuiPass.h"
 
 ModuleD3D12::ModuleD3D12(HWND _hWnd) : hWnd(_hWnd) {}
 
@@ -29,7 +30,10 @@ bool ModuleD3D12::init() {
 
 	// ============ Init command lists ============ 
 	for (int i = 0; i < FRAME_BUFFER_NUM; i++) {
-		device->CreateCommandList1(0, D3D12_COMMAND_LIST_TYPE_DIRECT, D3D12_COMMAND_LIST_FLAG_NONE, IID_PPV_ARGS(&commandLists[i]));
+		device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, commandAllocators[i].Get(), nullptr, IID_PPV_ARGS(&commandLists[i]));
+		if (i > 0) {
+			commandLists[i]->Close();
+		}
 	}
 
 	// ============ Init command queue ============ 
@@ -44,7 +48,7 @@ bool ModuleD3D12::init() {
 	DXGI_SWAP_CHAIN_DESC1 swapChainDesc = {};
 	RECT hWndRect;
 	// Width and Height (buffer size)
-	GetWindowRect(hWnd, &hWndRect);
+	GetClientRect(hWnd, &hWndRect);
 	if (&hWndRect) {
 		swapChainDesc.Width = hWndRect.right - hWndRect.left;
 		swapChainDesc.Height = hWndRect.bottom - hWndRect.top;
@@ -64,7 +68,7 @@ bool ModuleD3D12::init() {
 	// How many buffers
 	swapChainDesc.BufferCount = FRAME_BUFFER_NUM;
 	// How scaling the window will behave
-	swapChainDesc.Scaling = DXGI_SCALING_STRETCH;
+	swapChainDesc.Scaling = DXGI_SCALING_NONE;
 	// Method of swapping front and back buffers
 	swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
 	// How Alpha channel is treated
@@ -97,36 +101,36 @@ bool ModuleD3D12::init() {
 	// ============ Init fence ============
 	device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&fence));
 
-	// ============ Init fence values ============
-	for (int i = 0; i < FRAME_BUFFER_NUM; i++) {
-		fenceValues[i] = 0;
-	}
-
 	// ============ Init fence event (we'll use the same event for both fences) ============
 	fenceEvent = CreateEventA(nullptr, FALSE, 0, nullptr);
+
+	imGuiPass = new ImGuiPass(device.Get(), hWnd, {0}, {0});
 
 	return true;
 }
 
 void ModuleD3D12::preRender() {
-
-
 	// preRender de ModuleEditor
-	
+	imGuiPass->startFrame();
 
+
+	// Wait for the GPU to finish presenting the last frame
+	WaitForFence(fenceValue);
+
+	if (resizePending) {
+		resizeBuffers();
+		resizePending = false;
+	}
 
 	// Get the current back buffer index
 	currentBackBufferIndex = swapChain->GetCurrentBackBufferIndex();
-
-
-	// Wait for the GPU to finish
-	WaitForFence(fenceValues[currentBackBufferIndex]);
 
 	// Reset allocator for currentBackBufferIndex
 	commandAllocators[currentBackBufferIndex]->Reset();
 
 	// Reset the command list -> sets it to recording state
 	commandLists[currentBackBufferIndex]->Reset(commandAllocators[currentBackBufferIndex].Get(), nullptr);
+
 
 	// Set the usage state of the current buffer to RENDER_TARGET
 	barrier = CD3DX12_RESOURCE_BARRIER::Transition(buffers[currentBackBufferIndex].Get(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, D3D12_RESOURCE_BARRIER_FLAG_NONE);
@@ -136,7 +140,7 @@ void ModuleD3D12::preRender() {
 void ModuleD3D12::render() {
 	
 	// Record the actual commands (Reset, Draw, etc.)
-	float fV = fenceValue % 720;
+	/*float fV = fenceValue % 720;
 	if (fV > 120 && fV < 240) {
 		red -= 1.0f / 120;
 	}
@@ -158,9 +162,23 @@ void ModuleD3D12::render() {
 		blue -= 1.0f / 120;
 	}
 
-	float color[4] = { red, green, blue, 1.0f };
+	float color[4] = { red, green, blue, 1.0f };*/
+
+	ImGui::Begin("FPS info");
+	//ImGui::LabelText(std::to_string(deltaTime.count()).c_str(), "deltaTime");
+	unsigned int index = fenceValue % 600;
+	frameTimes[index] = deltaTime.count() / 10000.0f;
+	fps[index] = 1000.0f / frameTimes[index];
+	ImGui::PlotHistogram("Frame times", frameTimes, IM_ARRAYSIZE(frameTimes), 0, (std::to_string((int)frameTimes[index]) + " ms").c_str(), 0.0f, 32.0f, ImVec2(0, 80.0f));
+	ImGui::PlotHistogram("FPS", fps, IM_ARRAYSIZE(fps), 0, std::to_string((int)fps[index]).c_str(), 0.0f, 240.0f, ImVec2(0, 80.0f));
+	ImGui::End();
+
+
 	//float color[4] = { 1.0f, 0.0f, 0.0f, 1.0f };
 	commandLists[currentBackBufferIndex]->ClearRenderTargetView(rtvDescriptorHandles[currentBackBufferIndex], color, 0, nullptr);
+
+	// This HAS to go last so that the UI gets rendered on top
+	imGuiPass->record(commandLists[currentBackBufferIndex].Get(), rtvDescriptorHandles[currentBackBufferIndex]);
 }
 
 void ModuleD3D12::postRender() {
@@ -179,14 +197,41 @@ void ModuleD3D12::postRender() {
 
 	// This tells the GPU to set the fence's value to what you pass
 	commandQueue->Signal(fence.Get(), ++fenceValue);
-	currentBackBufferIndex = swapChain->GetCurrentBackBufferIndex();
-	fenceValues[currentBackBufferIndex] = fenceValue; // Store the fence for this buffer
 	
 }
 
-void ModuleD3D12::WaitForFence(unsigned int fenceValue) {
+void ModuleD3D12::WaitForFence(unsigned int _fenceValue) {
 	// Set fenceEvent as "completed" when the fence's value == frameCounter
-	fence->SetEventOnCompletion(fenceValue, fenceEvent);
+	fence->SetEventOnCompletion(_fenceValue, fenceEvent);
 	// Wait for the event to be "completed" (it means the GPU has increased the fence value by 1 and is done processing the frame)
 	WaitForSingleObject(fenceEvent, INFINITE);
+	deltaTime = std::chrono::time_point_cast<std::chrono::milliseconds>(std::chrono::system_clock::now()) - lastFrameTime;
+	lastFrameTime = std::chrono::time_point_cast<std::chrono::milliseconds>(std::chrono::system_clock::now());
+}
+
+void ModuleD3D12::setResizePending(RECT &_resizedRect) {
+	resizePending = true;
+	resizedRect = _resizedRect;
+}
+
+void ModuleD3D12::resizeBuffers() {
+	HRESULT h1;
+	HRESULT h2;
+	HRESULT h3;
+
+	// Release swap chain buffers
+	for (int i = 0; i < FRAME_BUFFER_NUM; i++) {
+		buffers[i].Reset();
+	}
+
+	swapChain->ResizeBuffers(FRAME_BUFFER_NUM, resizedRect.right - resizedRect.left, resizedRect.bottom - resizedRect.top, DXGI_FORMAT_UNKNOWN, 0);
+	for (int i = 0; i < FRAME_BUFFER_NUM; i++) {
+		HRESULT hr;
+		hr = swapChain->GetBuffer(i, IID_PPV_ARGS(&buffers[i]));
+		D3D12_CPU_DESCRIPTOR_HANDLE rtvCpuHandle;
+		CD3DX12_CPU_DESCRIPTOR_HANDLE::InitOffsetted(rtvCpuHandle, descriptorHeap.Get()->GetCPUDescriptorHandleForHeapStart(), i, device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV));
+		device->CreateRenderTargetView(buffers[i].Get(), nullptr, rtvCpuHandle);
+		rtvDescriptorHandles[i] = rtvCpuHandle;
+	}
+
 }

@@ -9,7 +9,7 @@ Application::Application(int argc, wchar_t** argv, void* hWnd)
 {
     modules.push_back(new ModuleInput((HWND)hWnd));
     modules.push_back(new ModuleD3D12((HWND)hWnd));
-    modules.push_back(new ModuleEditor((HWND)hWnd));
+    //modules.push_back(new ModuleEditor((HWND)hWnd));
 }
 
 Application::~Application()
@@ -29,7 +29,7 @@ bool Application::init()
 	for(auto it = modules.begin(); it != modules.end() && ret; ++it)
 		ret = (*it)->init();
 
-    ((ModuleEditor*)modules.at(2))->postInit((ModuleD3D12*)modules.at(1));
+    //((ModuleEditor*)modules.at(2))->postInit((ModuleD3D12*)modules.at(1));
 
     lastMilis = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 
@@ -53,19 +53,19 @@ void Application::update()
     if (!app->paused)
     {
         for (int i = 0; i < modules.size(); i++) {
-            modules.at(updateOrder[i])->update();
+            modules.at(i)->update();
         }
 
         for (int i = 0; i < modules.size(); i++) {
-            modules.at(preRenderOrder[i])->preRender();
+            modules.at(i)->preRender();
         }
 
         for (int i = 0; i < modules.size(); i++) {
-            modules.at(renderOrder[i])->render();
+            modules.at(i)->render();
         }
 
         for (int i = 0; i < modules.size(); i++) {
-            modules.at(postRenderOrder[i])->postRender();
+            modules.at(i)->postRender();
         }
     }
 }

@@ -1,6 +1,7 @@
 #pragma once
 #include "Globals.h"
 #include "Module.h"
+#include <chrono>
 
 class ImGuiPass;
 
@@ -8,6 +9,11 @@ class ImGuiPass;
 #define COLOR_CHANGE_RATE_CYCLE 120
 
 class ModuleD3D12 : public Module {
+	typedef struct ResizeStruct {
+		unsigned int width = 0;
+		unsigned int height = 0;
+	};
+
 public:
 	ModuleD3D12(HWND _hWnd);
 	bool init() override;
@@ -17,6 +23,8 @@ public:
 	void WaitForFence(unsigned int fenceValue);
 	ComPtr<ID3D12Device2> getDevice() const { return device; }
 	ComPtr<ID3D12GraphicsCommandList> getCurrentBufferCommandList() const { return commandLists[currentBackBufferIndex]; }
+	void setResizePending(RECT &resizedRect);
+	void resizeBuffers();
 private:
 	HWND hWnd;
 	ComPtr<IDXGIAdapter4> adapter;
@@ -31,11 +39,22 @@ private:
 	unsigned int currentBackBufferIndex = 0;
 	ComPtr<ID3D12Fence1> fence;
 	unsigned int fenceValue = 0;
-	unsigned int fenceValues[FRAME_BUFFER_NUM];
 	HANDLE fenceEvent;
 	float red = 1.0f;
 	float green = 0.0f;
 	float blue = 0.0f;
-	// 1.Set the usage state of the current buffer to RENDER_TARGET
+
 	CD3DX12_RESOURCE_BARRIER barrier = {};
+
+	bool resizePending = false;
+	RECT resizedRect = {};
+
+	ImGuiPass* imGuiPass;
+
+	float color[3] = { 0.2f, 0.2f, 0.2f };
+
+	std::chrono::system_clock::duration deltaTime;
+	std::chrono::system_clock::time_point lastFrameTime = std::chrono::time_point_cast<std::chrono::milliseconds>(std::chrono::system_clock::now());
+	float frameTimes[600] = {};
+	float fps[600] = {};
 };

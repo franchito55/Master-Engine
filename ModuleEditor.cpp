@@ -18,7 +18,7 @@ void ModuleEditor::render() {
 	ImGui::ShowDemoWindow();
 
 	ID3D12GraphicsCommandList* currentBufferCommandList = moduleD3D12->getCurrentBufferCommandList().Get();
-	imGuiPass->record(currentBufferCommandList);
+	imGuiPass->record(currentBufferCommandList, {});
 }
 
 void ModuleEditor::postRender() {};

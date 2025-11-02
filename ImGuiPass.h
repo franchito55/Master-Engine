@@ -10,5 +10,6 @@ public:
     ~ImGuiPass();
 
     void startFrame();
-    void record(ID3D12GraphicsCommandList* commandList);
+    void record(ID3D12GraphicsCommandList* commandList, D3D12_CPU_DESCRIPTOR_HANDLE cpuHandle);
+    ComPtr<ID3D12DescriptorHeap> getDescriptorHeap() { return heap; }
 };

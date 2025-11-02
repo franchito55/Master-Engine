@@ -17,6 +17,8 @@
 
 #include "backends/imgui_impl_win32.h"
 
+#include "ModuleD3D12.h"
+
 extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
 #define MAX_LOADSTRING 100
@@ -163,6 +165,7 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 //
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
+    RECT resizeRect;
     if (ImGui_ImplWin32_WndProcHandler(hWnd, message, wParam, lParam))
         return true;
     switch (message)
@@ -221,7 +224,13 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         }
         else {
             app->setPaused(false);
+            GetClientRect(hWnd, &resizeRect);
+            ((ModuleD3D12*)app->getModules().at(1))->setResizePending(resizeRect);
         }
+        break;
+    case WM_EXITSIZEMOVE:
+        /*GetClientRect(hWnd, &resizeRect);
+        ((ModuleD3D12*)app->getModules().at(1))->setResizePending(resizeRect);*/
         break;
     case WM_SYSKEYDOWN:
         if (wParam == VK_RETURN && (lParam & 0x60000000) == 0x20000000)
