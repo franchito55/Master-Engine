@@ -7,6 +7,7 @@ class ImGuiPass;
 
 #define FRAME_BUFFER_NUM 2
 #define COLOR_CHANGE_RATE_CYCLE 120
+#define FPS_PLOTTING_MAX 500
 
 class ModuleD3D12 : public Module {
 	typedef struct ResizeStruct {
@@ -55,6 +56,9 @@ private:
 
 	std::chrono::system_clock::duration deltaTime;
 	std::chrono::system_clock::time_point lastFrameTime = std::chrono::time_point_cast<std::chrono::milliseconds>(std::chrono::system_clock::now());
-	float frameTimes[600] = {};
-	float fps[600] = {};
+	float frameTimes[FPS_PLOTTING_MAX] = {};
+	float fps[FPS_PLOTTING_MAX] = {};
+
+	unsigned int minFps = 99999;
+	unsigned int maxFps = 0;
 };
