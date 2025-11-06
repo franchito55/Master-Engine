@@ -2,6 +2,7 @@
 #include "Globals.h"
 #include "Module.h"
 #include <chrono>
+#include "Application.h"
 
 class ImGuiPass;
 
@@ -37,6 +38,8 @@ private:
 	ComPtr<ID3D12Resource2> buffers[FRAME_BUFFER_NUM];
 	ComPtr<ID3D12DescriptorHeap> descriptorHeap;
 	D3D12_CPU_DESCRIPTOR_HANDLE rtvDescriptorHandles[FRAME_BUFFER_NUM];
+	ComPtr<ID3D12Resource> stagingBuffer;
+	ComPtr<ID3D12Resource> vertexBuffer;
 	unsigned int currentBackBufferIndex = 0;
 	ComPtr<ID3D12Fence1> fence;
 	unsigned int fenceValue = 0;
@@ -50,7 +53,7 @@ private:
 	bool resizePending = false;
 	RECT resizedRect = {};
 
-	ImGuiPass* imGuiPass;
+	ImGuiPass* imGuiPass = nullptr;
 
 	float color[3] = { 0.2f, 0.2f, 0.2f };
 

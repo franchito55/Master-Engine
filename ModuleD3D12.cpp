@@ -2,9 +2,13 @@
 #include "ModuleD3D12.h"
 #include "ImGuiPass.h"
 
+extern Application* app;
+
 ModuleD3D12::ModuleD3D12(HWND _hWnd) : hWnd(_hWnd) {}
 
 bool ModuleD3D12::init() {
+	app->setModuleD3D12(this);
+
 	// enable debug layer
 #ifdef _DEBUG
 	ComPtr<ID3D12Debug> iDebug;
@@ -237,9 +241,6 @@ void ModuleD3D12::setResizePending(RECT &_resizedRect) {
 }
 
 void ModuleD3D12::resizeBuffers() {
-	HRESULT h1;
-	HRESULT h2;
-	HRESULT h3;
 
 	// Release swap chain buffers
 	for (int i = 0; i < FRAME_BUFFER_NUM; i++) {
@@ -248,8 +249,7 @@ void ModuleD3D12::resizeBuffers() {
 
 	swapChain->ResizeBuffers(FRAME_BUFFER_NUM, resizedRect.right - resizedRect.left, resizedRect.bottom - resizedRect.top, DXGI_FORMAT_UNKNOWN, 0);
 	for (int i = 0; i < FRAME_BUFFER_NUM; i++) {
-		HRESULT hr;
-		hr = swapChain->GetBuffer(i, IID_PPV_ARGS(&buffers[i]));
+		swapChain->GetBuffer(i, IID_PPV_ARGS(&buffers[i]));
 		D3D12_CPU_DESCRIPTOR_HANDLE rtvCpuHandle;
 		CD3DX12_CPU_DESCRIPTOR_HANDLE::InitOffsetted(rtvCpuHandle, descriptorHeap.Get()->GetCPUDescriptorHandleForHeapStart(), i, device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV));
 		device->CreateRenderTargetView(buffers[i].Get(), nullptr, rtvCpuHandle);

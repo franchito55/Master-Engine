@@ -7,6 +7,9 @@
 #include <chrono>
 
 class Module;
+class ModuleD3D12;
+class ModuleEditor;
+class ModuleBuffer;
 
 class Application
 {
@@ -29,6 +32,15 @@ public:
 
     std::vector<Module*> getModules() { return modules; }
 
+    ModuleD3D12* getModuleD3D12(){ return moduleD3D12; };
+    void setModuleD3D12(ModuleD3D12* moduleD3D12) { this->moduleD3D12 = moduleD3D12; };
+
+    ModuleEditor* getModuleEditor() { return moduleEditor; };
+    void setModuleEditor(ModuleEditor* moduleEditor) { this->moduleEditor = moduleEditor; };
+
+    ModuleBuffer* getModuleBuffer() { return moduleBuffer; };
+    void setModuleBuffer(ModuleBuffer* moduleBuffer) { this->moduleBuffer = moduleBuffer; };
+
 private:
     enum { MAX_FPS_TICKS = 30 };
     typedef std::array<uint64_t, MAX_FPS_TICKS> TickList;
@@ -42,11 +54,9 @@ private:
     uint64_t  elapsedMilis = 0;
     bool      paused = false;
 
-    unsigned int initOrder[3] = { 0, 1, 2 };
-    unsigned int updateOrder[3] = { 0, 1, 2 };
-    unsigned int preRenderOrder[3] = { 0, 2, 1 };
-    unsigned int renderOrder[3] = { 0, 1, 2 };
-    unsigned int postRenderOrder[3] = { 0, 1, 2 };
+    ModuleD3D12* moduleD3D12 = nullptr;
+    ModuleEditor* moduleEditor = nullptr;
+    ModuleBuffer* moduleBuffer = nullptr;
 };
 
 extern Application* app;
