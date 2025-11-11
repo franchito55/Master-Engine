@@ -30,14 +30,13 @@ bool ModuleD3D12::init() {
 	// ============ Init command allocators ============ 
 	for (int i = 0; i < FRAME_BUFFER_NUM; i++) {
 		device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&commandAllocators[i]));
+		commandAllocators[i]->Reset();
 	}
 
 	// ============ Init command lists ============ 
 	for (int i = 0; i < FRAME_BUFFER_NUM; i++) {
 		device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, commandAllocators[i].Get(), nullptr, IID_PPV_ARGS(&commandLists[i]));
-		if (i > 0) {
-			commandLists[i]->Close();
-		}
+		commandLists[i]->Close();
 	}
 
 	// ============ Init command queue ============ 
@@ -117,24 +116,29 @@ void ModuleD3D12::preRender() {
 	// preRender de ModuleEditor
 	imGuiPass->startFrame();
 
-
-	// Wait for the GPU to finish presenting the last frame
-	WaitForFence(fenceValue);
+	// Get the current back buffer index
+	currentBackBufferIndex = swapChain->GetCurrentBackBufferIndex();
 
 	if (resizePending) {
+		// When resizing, we need to wait for ALL buffers to be ready
+		for (unsigned int i = 0; i < FRAME_BUFFER_NUM; i++) {
+			WaitForFence(fenceValues[i]);
+		}
 		resizeBuffers();
 		resizePending = false;
 	}
+	else {
+		// Wait for the GPU to finish presenting the last frame
+		WaitForFence(fenceValues[currentBackBufferIndex]);
+	}
 
-	// Get the current back buffer index
-	currentBackBufferIndex = swapChain->GetCurrentBackBufferIndex();
+	//WaitForFence(fenceValues[currentBackBufferIndex]);
 
 	// Reset allocator for currentBackBufferIndex
 	commandAllocators[currentBackBufferIndex]->Reset();
 
 	// Reset the command list -> sets it to recording state
 	commandLists[currentBackBufferIndex]->Reset(commandAllocators[currentBackBufferIndex].Get(), nullptr);
-
 
 	// Set the usage state of the current buffer to RENDER_TARGET
 	barrier = CD3DX12_RESOURCE_BARRIER::Transition(buffers[currentBackBufferIndex].Get(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, D3D12_RESOURCE_BARRIER_FLAG_NONE);
@@ -170,7 +174,7 @@ void ModuleD3D12::render() {
 
 	ImGui::Begin("FPS info");
 	//ImGui::LabelText(std::to_string(deltaTime.count()).c_str(), "deltaTime");
-	unsigned int index = fenceValue % FPS_PLOTTING_MAX;
+	unsigned int index = fpsCount % FPS_PLOTTING_MAX;
 	frameTimes[index] = deltaTime.count() / 10000.0f;
 	fps[index] = 1000.0f / frameTimes[index];
 
@@ -185,7 +189,7 @@ void ModuleD3D12::render() {
 	unsigned int averageFps = 0;
 	unsigned int numFps = 0;
 	for (unsigned int i = 0; i < FPS_PLOTTING_MAX; i++) {
-		if (fps[i] != 0) {
+		if (fps[i] != 0 && fps[i] != INFINITE) {
 			numFps++;
 			averageFps += fps[i];
 		}
@@ -222,11 +226,12 @@ void ModuleD3D12::postRender() {
 	swapChain->Present(1, 0);
 
 	// This tells the GPU to set the fence's value to what you pass
-	commandQueue->Signal(fence.Get(), ++fenceValue);
-	
+	fpsCount++;
+	fenceValues[currentBackBufferIndex] = fpsCount;
+	commandQueue->Signal(fence.Get(), fenceValues[currentBackBufferIndex]);
 }
 
-void ModuleD3D12::WaitForFence(unsigned int _fenceValue) {
+void ModuleD3D12::WaitForFence(const unsigned int _fenceValue) {
 	// Set fenceEvent as "completed" when the fence's value == frameCounter
 	fence->SetEventOnCompletion(_fenceValue, fenceEvent);
 	// Wait for the event to be "completed" (it means the GPU has increased the fence value by 1 and is done processing the frame)
@@ -235,7 +240,7 @@ void ModuleD3D12::WaitForFence(unsigned int _fenceValue) {
 	lastFrameTime = std::chrono::time_point_cast<std::chrono::milliseconds>(std::chrono::system_clock::now());
 }
 
-void ModuleD3D12::setResizePending(RECT &_resizedRect) {
+void ModuleD3D12::setResizePending(const RECT &_resizedRect) {
 	resizePending = true;
 	resizedRect = _resizedRect;
 }
@@ -243,17 +248,23 @@ void ModuleD3D12::setResizePending(RECT &_resizedRect) {
 void ModuleD3D12::resizeBuffers() {
 
 	// Release swap chain buffers
-	for (int i = 0; i < FRAME_BUFFER_NUM; i++) {
+	for (unsigned int i = 0; i < FRAME_BUFFER_NUM; i++) {
 		buffers[i].Reset();
 	}
 
 	swapChain->ResizeBuffers(FRAME_BUFFER_NUM, resizedRect.right - resizedRect.left, resizedRect.bottom - resizedRect.top, DXGI_FORMAT_UNKNOWN, 0);
-	for (int i = 0; i < FRAME_BUFFER_NUM; i++) {
+	for (unsigned int i = 0; i < FRAME_BUFFER_NUM; i++) {
 		swapChain->GetBuffer(i, IID_PPV_ARGS(&buffers[i]));
 		D3D12_CPU_DESCRIPTOR_HANDLE rtvCpuHandle;
 		CD3DX12_CPU_DESCRIPTOR_HANDLE::InitOffsetted(rtvCpuHandle, descriptorHeap.Get()->GetCPUDescriptorHandleForHeapStart(), i, device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV));
 		device->CreateRenderTargetView(buffers[i].Get(), nullptr, rtvCpuHandle);
 		rtvDescriptorHandles[i] = rtvCpuHandle;
 	}
-
+	
+	// swapChain->ResizeBuffers() RESETS the swap chain's current back buffer index 
+	// back to 0, so we need to update it here
+	currentBackBufferIndex = swapChain->GetCurrentBackBufferIndex();
+	for (unsigned int i = 0; i < FRAME_BUFFER_NUM; i++) {
+		fenceValues[i] = 0;
+	}
 }
