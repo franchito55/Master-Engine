@@ -32,14 +32,18 @@ public:
 
     std::vector<Module*> getModules() { return modules; }
 
-    ModuleD3D12* getModuleD3D12(){ return moduleD3D12; };
+    ModuleD3D12* getModuleD3D12() const { return moduleD3D12; };
     void setModuleD3D12(ModuleD3D12* moduleD3D12) { this->moduleD3D12 = moduleD3D12; };
 
-    ModuleEditor* getModuleEditor() { return moduleEditor; };
+    ModuleEditor* getModuleEditor() const { return moduleEditor; };
     void setModuleEditor(ModuleEditor* moduleEditor) { this->moduleEditor = moduleEditor; };
 
-    ModuleBuffer* getModuleBuffer() { return moduleBuffer; };
+    ModuleBuffer* getModuleBuffer() const { return moduleBuffer; };
     void setModuleBuffer(ModuleBuffer* moduleBuffer) { this->moduleBuffer = moduleBuffer; };
+
+    ComPtr<ID3D12Device> getDevice() const { return moduleD3D12->getDevice(); };
+
+    ComPtr<ID3D12GraphicsCommandList> getCurrentCommandList() const { return moduleD3D12->getCurrentBufferCommandList(); };
 
 private:
     enum { MAX_FPS_TICKS = 30 };
