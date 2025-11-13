@@ -1,6 +1,8 @@
 #include "Globals.h"
 #include "ModuleD3D12.h"
 #include "ImGuiPass.h"
+#include "Timer.h"
+#include <iostream>
 
 extern Application* app;
 
