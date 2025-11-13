@@ -225,6 +225,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         else {
             app->setPaused(false);
             GetClientRect(hWnd, &resizeRect);
+            app->setWindowWidth(resizeRect.right - resizeRect.left);
+            app->setWindowWidth(resizeRect.bottom - resizeRect.top);
             ((ModuleD3D12*)app->getModules().at(1))->setResizePending(resizeRect);
         }
         break;

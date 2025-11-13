@@ -172,41 +172,41 @@ void ModuleD3D12::render() {
 
 	float color[4] = { red, green, blue, 1.0f };*/
 
-	//ImGui::Begin("FPS info");
-	////ImGui::LabelText(std::to_string(deltaTime.count()).c_str(), "deltaTime");
-	//unsigned int index = fpsCount % FPS_PLOTTING_MAX;
-	//frameTimes[index] = deltaTime.count() / 10000.0f;
-	//fps[index] = 1000.0f / frameTimes[index];
+	ImGui::Begin("FPS info");
+	//ImGui::LabelText(std::to_string(deltaTime.count()).c_str(), "deltaTime");
+	unsigned int index = fpsCount % FPS_PLOTTING_MAX;
+	frameTimes[index] = deltaTime.count() / 10000.0f;
+	fps[index] = 1000.0f / frameTimes[index];
 
-	//if (index == 0) {
-	//	minFps = 99999;
-	//	maxFps = 0;
-	//}
-	//if (fps[index] < minFps)
-	//	minFps = fps[index];
-	//if (fps[index] > maxFps)
-	//	maxFps = fps[index];
-	//unsigned int averageFps = 0;
-	//unsigned int numFps = 0;
-	//for (unsigned int i = 0; i < FPS_PLOTTING_MAX; i++) {
-	//	if (fps[i] != 0 && fps[i] != INFINITE) {
-	//		numFps++;
-	//		averageFps += fps[i];
-	//	}
-	//}
-	//averageFps /= numFps;
+	if (index == 0) {
+		minFps = 99999;
+		maxFps = 0;
+	}
+	if (fps[index] < minFps)
+		minFps = fps[index];
+	if (fps[index] > maxFps)
+		maxFps = fps[index];
+	unsigned int averageFps = 0;
+	unsigned int numFps = 0;
+	for (unsigned int i = 0; i < FPS_PLOTTING_MAX; i++) {
+		if (fps[i] != 0 && fps[i] != INFINITE) {
+			numFps++;
+			averageFps += fps[i];
+		}
+	}
+	averageFps /= numFps;
 
-	//char overlay[32];
-	//snprintf(overlay, 32, "avg: %d min: %d max: %d", averageFps, minFps, maxFps);
-	//ImGui::PlotLines("Frame times", frameTimes, IM_ARRAYSIZE(frameTimes), 0, (std::to_string((int)frameTimes[index]) + " ms").c_str(), 0.0f, 32.0f, ImVec2(0, 80.0f));
-	//ImGui::PlotLines("FPS", fps, IM_ARRAYSIZE(fps), 0, overlay, 0.0f, 360.0f, ImVec2(0, 80.0f));
-	//ImGui::End();
+	char overlay[32];
+	snprintf(overlay, 32, "avg: %d min: %d max: %d", averageFps, minFps, maxFps);
+	ImGui::PlotLines("Frame times", frameTimes, IM_ARRAYSIZE(frameTimes), 0, (std::to_string((int)frameTimes[index]) + " ms").c_str(), 0.0f, 32.0f, ImVec2(0, 80.0f));
+	ImGui::PlotLines("FPS", fps, IM_ARRAYSIZE(fps), 0, overlay, 0.0f, 360.0f, ImVec2(0, 80.0f));
+	ImGui::End();
 
-	////float color[4] = { 1.0f, 0.0f, 0.0f, 1.0f };
-	//commandLists[currentBackBufferIndex]->ClearRenderTargetView(rtvDescriptorHandles[currentBackBufferIndex], color, 0, nullptr);
+	//float color[4] = { 1.0f, 0.0f, 0.0f, 1.0f };
+	commandLists[currentBackBufferIndex]->ClearRenderTargetView(rtvDescriptorHandles[currentBackBufferIndex], color, 0, nullptr);
 
-	//// This HAS to go last so that the UI gets rendered on top
-	//imGuiPass->record(commandLists[currentBackBufferIndex].Get(), rtvDescriptorHandles[currentBackBufferIndex]);
+	// This HAS to go last so that the UI gets rendered on top
+	imGuiPass->record(commandLists[currentBackBufferIndex].Get(), rtvDescriptorHandles[currentBackBufferIndex]);
 }
 
 void ModuleD3D12::postRender() {

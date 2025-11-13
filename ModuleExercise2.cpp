@@ -12,7 +12,7 @@ ModuleExercise2::ModuleExercise2(HWND _hWnd) : hWnd(_hWnd) {};
 bool ModuleExercise2::init(){ return true; }
 
 bool ModuleExercise2::postInit(){ 
-	ComPtr<ID3D12Device> device = app->getDevice();
+	ComPtr<ID3D12Device> device = app->getModuleD3D12()->getDevice();
 	CD3DX12_ROOT_SIGNATURE_DESC rootSigDesc = {};
 	rootSigDesc.Init(0, nullptr, 0, nullptr, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
 	ComPtr<ID3DBlob> rootSigBlob;
@@ -44,15 +44,44 @@ bool ModuleExercise2::postInit(){
 	psoDesc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
 	psoDesc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
 	device->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&pso));
+
+	createVertexBufferView(&vBV);
+
+	app->getModuleBuffer()->createDefaultBuffer(stagingBuffer, 9 * sizeof(float));
+	app->getModuleBuffer()->createUploadBuffer(vertexBuffer, 9 * sizeof(float));
+
+	// Get a pointer to the resource in CPU (pData)
+	BYTE* pData = nullptr;
+	CD3DX12_RANGE readRange(0, 0);
+	HRESULT hr = stagingBuffer.Get()->Map(0, &readRange, reinterpret_cast<void**>(&pData));
+
+	// Copy the data from the CPU array to the Resource
+	memcpy(pData, vertices, sizeof(vertices));
+
+	// Invalidates the pointer -> probably marks it as "used" ???
+	stagingBuffer.Get()->Unmap(0, nullptr);
+
+	return true;
 }
 
 void ModuleExercise2::preRender() {}
 
 void ModuleExercise2::render() {
-	D3D12_VERTEX_BUFFER_VIEW vBV;
-	vBV.BufferLocation = app->getModuleBuffer()->getVertexBuffer()->GetGPUVirtualAddress();
-	vBV.SizeInBytes = 9 * sizeof(float);
-	vBV.StrideInBytes = 3 * sizeof(float);
-	app->getDevice()->
-	app->getCurrentCommandList().Get()->OMSetRenderTargets(1, &vBV, nullptr);
+	ComPtr<ID3D12GraphicsCommandList> commandList = app->getModuleD3D12()->getCurrentBufferCommandList();
+	commandList->SetGraphicsRootSignature(rootSignature.Get());
+	commandList->IASetVertexBuffers(0, 1, &vBV);
+	D3D12_VIEWPORT vp = { 0.0f, 0.0f, float(app->getWindowWidth()), float(app->getWindowHeight()), 0.0f, 1.0f };
+	commandList->RSSetViewports(1, &vp);
+	D3D12_RECT scissor = { 0, 0, app->getWindowWidth(), app->getWindowHeight() };
+	commandList->RSSetScissorRects(1, &scissor);
+	commandList->IASetPrimitiveTopology(D3D10_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+	commandList->DrawInstanced(3, 1, 0, 0);
+}
+
+void ModuleExercise2::postRender() {}
+
+void ModuleExercise2::createVertexBufferView(D3D12_VERTEX_BUFFER_VIEW* vBV) {
+	vBV->BufferLocation = vertexBuffer->GetGPUVirtualAddress();
+	vBV->SizeInBytes = 9 * sizeof(float);
+	vBV->StrideInBytes = 3 * sizeof(float);
 }

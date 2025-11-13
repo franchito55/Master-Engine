@@ -30,20 +30,21 @@ public:
     bool                        isPaused() const { return paused; }
     bool                        setPaused(bool p) { paused = p; return paused; }
 
-    std::vector<Module*> getModules() { return modules; }
+    std::vector<Module*> getModules() const { return modules; }
 
-    ModuleD3D12* getModuleD3D12() const { return moduleD3D12; };
-    void setModuleD3D12(ModuleD3D12* moduleD3D12) { this->moduleD3D12 = moduleD3D12; };
+    ModuleD3D12* getModuleD3D12() const { return moduleD3D12; }
+    void setModuleD3D12(ModuleD3D12* _moduleD3D12) { moduleD3D12 = _moduleD3D12; }
 
-    ModuleEditor* getModuleEditor() const { return moduleEditor; };
-    void setModuleEditor(ModuleEditor* moduleEditor) { this->moduleEditor = moduleEditor; };
+    ModuleEditor* getModuleEditor() const { return moduleEditor; }
+    void setModuleEditor(ModuleEditor* _moduleEditor) { moduleEditor = _moduleEditor; }
 
-    ModuleBuffer* getModuleBuffer() const { return moduleBuffer; };
-    void setModuleBuffer(ModuleBuffer* moduleBuffer) { this->moduleBuffer = moduleBuffer; };
+    ModuleBuffer* getModuleBuffer() const { return moduleBuffer; }
+    void setModuleBuffer(ModuleBuffer* _moduleBuffer) { moduleBuffer = _moduleBuffer; }
 
-    ComPtr<ID3D12Device> getDevice() const { return moduleD3D12->getDevice(); };
-
-    ComPtr<ID3D12GraphicsCommandList> getCurrentCommandList() const { return moduleD3D12->getCurrentBufferCommandList(); };
+    unsigned int getWindowWidth() const { return windowWidth; }
+    void setWindowWidth(const unsigned int _windowWidth) { windowWidth = _windowWidth; }
+    unsigned int getWindowHeight() const { return windowHeight; }
+    void setWindowHeight(const unsigned int _windowHeight) { windowHeight = _windowHeight; }
 
 private:
     enum { MAX_FPS_TICKS = 30 };
@@ -61,6 +62,9 @@ private:
     ModuleD3D12* moduleD3D12 = nullptr;
     ModuleEditor* moduleEditor = nullptr;
     ModuleBuffer* moduleBuffer = nullptr;
+
+    unsigned int windowWidth;
+    unsigned int windowHeight;
 };
 
 extern Application* app;

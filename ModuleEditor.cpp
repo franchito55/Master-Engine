@@ -4,9 +4,7 @@
 #include "ModuleD3D12.h"
 
 
-bool ModuleEditor::postInit(ModuleD3D12* _moduleD3D12) {
-	moduleD3D12 = _moduleD3D12;
-	imGuiPass = new ImGuiPass(moduleD3D12->getDevice().Get(), hWnd, {0}, {0});
+bool ModuleEditor::postInit() {
 	return true;
 }
 
@@ -17,7 +15,7 @@ void ModuleEditor::preRender() {
 void ModuleEditor::render() {
 	ImGui::ShowDemoWindow();
 
-	ID3D12GraphicsCommandList* currentBufferCommandList = moduleD3D12->getCurrentBufferCommandList().Get();
+	ID3D12GraphicsCommandList* currentBufferCommandList = app->getModuleD3D12()->getCurrentBufferCommandList().Get();
 	imGuiPass->record(currentBufferCommandList, {});
 }
 

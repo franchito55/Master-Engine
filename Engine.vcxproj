@@ -182,6 +182,7 @@
     <ClInclude Include="ModuleBuffer.h" />
     <ClInclude Include="ModuleD3D12.h" />
     <ClInclude Include="ModuleEditor.h" />
+    <ClInclude Include="ModuleExercise2.h" />
     <ClInclude Include="ModuleInput.h" />
     <ClInclude Include="Mouse.h" />
     <ClInclude Include="PlatformHelpers.h" />
@@ -274,6 +275,7 @@
     <ClCompile Include="ModuleBuffer.cpp" />
     <ClCompile Include="ModuleD3D12.cpp" />
     <ClCompile Include="ModuleEditor.cpp" />
+    <ClCompile Include="ModuleExercise2.cpp" />
     <ClCompile Include="ModuleInput.cpp" />
     <ClCompile Include="Mouse.cpp" />
     <ClCompile Include="SimpleMath.cpp">
@@ -290,6 +292,20 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="SimpleMath.inl" />
+  </ItemGroup>
+  <ItemGroup>
+    <FxCompile Include="Exercise2PS.hlsl">
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">6.0</ShaderModel>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">6.0</ShaderModel>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Pixel</ShaderType>
+    </FxCompile>
+    <FxCompile Include="Exercise2VS.hlsl">
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Vertex</ShaderType>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">6.0</ShaderModel>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Vertex</ShaderType>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">6.0</ShaderModel>
+    </FxCompile>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
