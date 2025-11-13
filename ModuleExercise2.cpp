@@ -9,17 +9,15 @@ extern Application* app;
 
 ModuleExercise2::ModuleExercise2(HWND _hWnd) : hWnd(_hWnd) {};
 
-bool ModuleExercise2::init(){ return true; }
-
-bool ModuleExercise2::postInit(){ 
+bool ModuleExercise2::init(){
 	ComPtr<ID3D12Device> device = app->getModuleD3D12()->getDevice();
 	CD3DX12_ROOT_SIGNATURE_DESC rootSigDesc = {};
 	rootSigDesc.Init(0, nullptr, 0, nullptr, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
 	ComPtr<ID3DBlob> rootSigBlob;
 	D3D12SerializeRootSignature(&rootSigDesc, D3D_ROOT_SIGNATURE_VERSION_1, &rootSigBlob, nullptr);
 	ComPtr<ID3D12RootSignature> rootSignature;
-	device->CreateRootSignature(0, rootSigBlob->GetBufferPointer(), rootSigBlob->GetBufferSize(), IID_PPV_ARGS(&rootSignature));
-	
+	HRESULT hr1 = device->CreateRootSignature(0, rootSigBlob->GetBufferPointer(), rootSigBlob->GetBufferSize(), IID_PPV_ARGS(&rootSignature));
+
 	D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = {};
 	psoDesc.pRootSignature = rootSignature.Get();
 	auto dataVS = DX::ReadData(L"Exercise2VS.hlsl");

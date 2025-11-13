@@ -6,7 +6,6 @@ class ModuleExercise2 : public Module {
 public:
 	ModuleExercise2(HWND _hWnd);
 	bool init() override;
-	bool postInit() override;
 	void preRender() override;
 	void render() override;
 	void postRender() override;
