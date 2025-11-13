@@ -53,5 +53,6 @@ void ModuleExercise2::render() {
 	vBV.BufferLocation = app->getModuleBuffer()->getVertexBuffer()->GetGPUVirtualAddress();
 	vBV.SizeInBytes = 9 * sizeof(float);
 	vBV.StrideInBytes = 3 * sizeof(float);
-	app->getDevice()->CreateVerte
+	app->getDevice()->
+	app->getCurrentCommandList().Get()->OMSetRenderTargets(1, &vBV, nullptr);
 }
