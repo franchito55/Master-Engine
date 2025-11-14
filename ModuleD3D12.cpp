@@ -27,25 +27,39 @@ bool ModuleD3D12::init() {
 	factory->EnumAdapterByGpuPreference(0, DXGI_GPU_PREFERENCE_HIGH_PERFORMANCE, IID_PPV_ARGS(&adapter));
 	D3D12CreateDevice(adapter.Get(), D3D_FEATURE_LEVEL_12_0, IID_PPV_ARGS(&device));
 
-	// ============ Init command allocators ============ 
+	// ============ Init render command allocators ============ 
 	for (int i = 0; i < FRAME_BUFFER_NUM; i++) {
-		device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&commandAllocators[i]));
-		commandAllocators[i]->Reset();
+		device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&renderCommandAllocators[i]));
+		renderCommandAllocators[i]->Reset();
 	}
 
-	// ============ Init command lists ============ 
+	// ============ Init copy command allocator ============ 
+	device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_COPY, IID_PPV_ARGS(&copyCommandAllocator));
+
+	// ============ Init render command lists ============ 
 	for (int i = 0; i < FRAME_BUFFER_NUM; i++) {
-		device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, commandAllocators[i].Get(), nullptr, IID_PPV_ARGS(&commandLists[i]));
-		commandLists[i]->Close();
+		device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, renderCommandAllocators[i].Get(), nullptr, IID_PPV_ARGS(&renderCommandLists[i]));
+		renderCommandLists[i]->Close();
 	}
 
-	// ============ Init command queue ============ 
-	D3D12_COMMAND_QUEUE_DESC queueDesc = {};
-	queueDesc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
-	queueDesc.Priority = D3D12_COMMAND_QUEUE_PRIORITY_NORMAL;
-	queueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
-	queueDesc.NodeMask = 0;
-	device->CreateCommandQueue(&queueDesc, IID_PPV_ARGS(&commandQueue));
+	// ============ Init copy command list ============
+	device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_COPY, copyCommandAllocator.Get(), nullptr, IID_PPV_ARGS(&copyCommandList));
+
+	// ============ Init render command queue ============ 
+	D3D12_COMMAND_QUEUE_DESC renderQueueDesc = {};
+	renderQueueDesc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
+	renderQueueDesc.Priority = D3D12_COMMAND_QUEUE_PRIORITY_NORMAL;
+	renderQueueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
+	renderQueueDesc.NodeMask = 0;
+	device->CreateCommandQueue(&renderQueueDesc, IID_PPV_ARGS(&renderCommandQueue));
+
+	// ============ Init copy command queue ============ 
+	D3D12_COMMAND_QUEUE_DESC copyQueueDesc = {};
+	copyQueueDesc.Type = D3D12_COMMAND_LIST_TYPE_COPY;
+	copyQueueDesc.Priority = D3D12_COMMAND_QUEUE_PRIORITY_NORMAL;
+	copyQueueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
+	copyQueueDesc.NodeMask = 0;
+	device->CreateCommandQueue(&copyQueueDesc, IID_PPV_ARGS(&copyCommandQueue));
 
 	// ============ Init swap chain ============
 	DXGI_SWAP_CHAIN_DESC1 swapChainDesc = {};
@@ -78,7 +92,7 @@ bool ModuleD3D12::init() {
 	swapChainDesc.AlphaMode = DXGI_ALPHA_MODE_UNSPECIFIED;
 	// Flags
 	swapChainDesc.Flags = 0;
-	factory->CreateSwapChainForHwnd(commandQueue.Get(), hWnd, &swapChainDesc, nullptr, nullptr, (IDXGISwapChain1**)IID_PPV_ARGS_Helper(&swapChain));
+	factory->CreateSwapChainForHwnd(renderCommandQueue.Get(), hWnd, &swapChainDesc, nullptr, nullptr, (IDXGISwapChain1**)IID_PPV_ARGS_Helper(&swapChain));
 
 	// ============ Init descriptor heap ============ 
 	D3D12_DESCRIPTOR_HEAP_DESC descriptorHeapDesc = {};
@@ -135,45 +149,25 @@ void ModuleD3D12::preRender() {
 	//WaitForFence(fenceValues[currentBackBufferIndex]);
 
 	// Reset allocator for currentBackBufferIndex
-	commandAllocators[currentBackBufferIndex]->Reset();
+	renderCommandAllocators[currentBackBufferIndex]->Reset();
 
 	// Reset the command list -> sets it to recording state
-	commandLists[currentBackBufferIndex]->Reset(commandAllocators[currentBackBufferIndex].Get(), nullptr);
+	renderCommandLists[currentBackBufferIndex]->Reset(renderCommandAllocators[currentBackBufferIndex].Get(), nullptr);
 
 	// Set the usage state of the current buffer to RENDER_TARGET
 	barrier = CD3DX12_RESOURCE_BARRIER::Transition(buffers[currentBackBufferIndex].Get(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, D3D12_RESOURCE_BARRIER_FLAG_NONE);
-	commandLists[currentBackBufferIndex]->ResourceBarrier(1, &barrier);
+	renderCommandLists[currentBackBufferIndex]->ResourceBarrier(1, &barrier);
+
+	renderCommandLists[currentBackBufferIndex]->ClearRenderTargetView(rtvDescriptorHandles[currentBackBufferIndex], color, 0, nullptr);
 }
 
 void ModuleD3D12::render() {
-	
-	// Record the actual commands (Reset, Draw, etc.)
-	/*float fV = fenceValue % 720;
-	if (fV > 120 && fV < 240) {
-		red -= 1.0f / 120;
-	}
-	else if (fV > 480 && fV < 600) {
-		red += 1.0f / 120;
-	}
+}
 
-	if (fV > 0 && fV < 120) {
-		green += 1.0f / 120;
-	}
-	else if (fV > 360 && fV < 480) {
-		green -= 1.0f / 120;
-	}
-
-	if (fV > 240 && fV < 360) {
-		blue += 1.0f / 120;
-	}
-	else if (fV > 600 && fV < 720) {
-		blue -= 1.0f / 120;
-	}
-
-	float color[4] = { red, green, blue, 1.0f };*/
-
+void ModuleD3D12::postRender() {
+	// ImGui stuff in postRender() so it renders AFTER everything else
 	ImGui::Begin("FPS info");
-	//ImGui::LabelText(std::to_string(deltaTime.count()).c_str(), "deltaTime");
+	// ImGui::LabelText(std::to_string(deltaTime.count()).c_str(), "deltaTime");
 	unsigned int index = fpsCount % FPS_PLOTTING_MAX;
 	frameTimes[index] = deltaTime.count() / 10000.0f;
 	fps[index] = 1000.0f / frameTimes[index];
@@ -202,23 +196,17 @@ void ModuleD3D12::render() {
 	ImGui::PlotLines("FPS", fps, IM_ARRAYSIZE(fps), 0, overlay, 0.0f, 360.0f, ImVec2(0, 80.0f));
 	ImGui::End();
 
-	//float color[4] = { 1.0f, 0.0f, 0.0f, 1.0f };
-	commandLists[currentBackBufferIndex]->ClearRenderTargetView(rtvDescriptorHandles[currentBackBufferIndex], color, 0, nullptr);
-
 	// This HAS to go last so that the UI gets rendered on top
-	imGuiPass->record(commandLists[currentBackBufferIndex].Get(), rtvDescriptorHandles[currentBackBufferIndex]);
-}
-
-void ModuleD3D12::postRender() {
+	imGuiPass->record(renderCommandLists[currentBackBufferIndex].Get(), rtvDescriptorHandles[currentBackBufferIndex]);
 
 	// Transition back to PRESENT
 	barrier = CD3DX12_RESOURCE_BARRIER::Transition(buffers[currentBackBufferIndex].Get(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, D3D12_RESOURCE_BARRIER_FLAG_NONE);
-	commandLists[currentBackBufferIndex]->ResourceBarrier(1, &barrier);
+	renderCommandLists[currentBackBufferIndex]->ResourceBarrier(1, &barrier);
 
 	// Close list and execute command list
-	commandLists[currentBackBufferIndex]->Close();
-	ID3D12CommandList* lists[] = { commandLists[currentBackBufferIndex].Get() };
-	commandQueue->ExecuteCommandLists(1, lists);
+	renderCommandLists[currentBackBufferIndex]->Close();
+	ID3D12CommandList* lists[] = { renderCommandLists[currentBackBufferIndex].Get() };
+	renderCommandQueue->ExecuteCommandLists(1, lists);
 
 	// Present
 	swapChain->Present(1, 0);
@@ -226,7 +214,7 @@ void ModuleD3D12::postRender() {
 	// This tells the GPU to set the fence's value to what you pass
 	fpsCount++;
 	fenceValues[currentBackBufferIndex] = fpsCount;
-	commandQueue->Signal(fence.Get(), fenceValues[currentBackBufferIndex]);
+	renderCommandQueue->Signal(fence.Get(), fenceValues[currentBackBufferIndex]);
 }
 
 void ModuleD3D12::WaitForFence(const unsigned int _fenceValue) {

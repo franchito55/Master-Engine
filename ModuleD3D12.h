@@ -24,16 +24,25 @@ public:
 	void postRender() override;
 	void WaitForFence(const unsigned int fenceValue);
 	ComPtr<ID3D12Device2> getDevice() const { return device; }
-	ComPtr<ID3D12GraphicsCommandList> getCurrentBufferCommandList() const { return commandLists[currentBackBufferIndex]; }
+	ComPtr<ID3D12GraphicsCommandList> getCurrentBufferCommandList() const { return renderCommandLists[currentBackBufferIndex]; }
+	ComPtr<ID3D12CommandQueue> getRenderCommandQueue() const { return renderCommandQueue; }
+	ComPtr<ID3D12CommandQueue> getCopyCommandQueue() const { return copyCommandQueue; }
+	ComPtr<ID3D12GraphicsCommandList> getCopyCommandList() const { return copyCommandList; }
 	void setResizePending(const RECT &resizedRect);
 	void resizeBuffers();
+	ImGuiPass* getImGuiPass() const { return imGuiPass; }
+	const D3D12_CPU_DESCRIPTOR_HANDLE* getCurrentRtvCpuDescriptorHandle() const { return &rtvDescriptorHandles[currentBackBufferIndex]; }
+	ComPtr<ID3D12Fence> getFence() const { return fence; }
 private:
 	HWND hWnd;
 	ComPtr<IDXGIAdapter4> adapter;
 	ComPtr<ID3D12Device4> device;
-	ComPtr<ID3D12CommandAllocator> commandAllocators[FRAME_BUFFER_NUM];
-	ComPtr<ID3D12GraphicsCommandList> commandLists[FRAME_BUFFER_NUM];
-	ComPtr<ID3D12CommandQueue> commandQueue;
+	ComPtr<ID3D12CommandAllocator> renderCommandAllocators[FRAME_BUFFER_NUM];
+	ComPtr<ID3D12CommandAllocator> copyCommandAllocator;
+	ComPtr<ID3D12GraphicsCommandList> renderCommandLists[FRAME_BUFFER_NUM];
+	ComPtr<ID3D12GraphicsCommandList> copyCommandList;
+	ComPtr<ID3D12CommandQueue> renderCommandQueue;
+	ComPtr<ID3D12CommandQueue> copyCommandQueue;
 	ComPtr<IDXGISwapChain4> swapChain;
 	ComPtr<ID3D12Resource2> buffers[FRAME_BUFFER_NUM];
 	ComPtr<ID3D12DescriptorHeap> descriptorHeap;
