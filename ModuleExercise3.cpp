@@ -1,5 +1,5 @@
 #include "Globals.h"
-#include "ModuleExercise2.h"
+#include "ModuleExercise3.h"
 #include "Application.h"
 #include "ModuleD3D12.h"
 #include "ReadData.h"
@@ -8,12 +8,14 @@
 
 extern Application* app;
 
-ModuleExercise2::ModuleExercise2(HWND _hWnd) : hWnd(_hWnd) {};
+ModuleExercise3::ModuleExercise3(HWND _hWnd) : hWnd(_hWnd) {};
 
-bool ModuleExercise2::init(){
+bool ModuleExercise3::init(){
 	ComPtr<ID3D12Device> device = app->getModuleD3D12()->getDevice();
 	CD3DX12_ROOT_SIGNATURE_DESC rootSigDesc = {};
-	rootSigDesc.Init(0, nullptr, 0, nullptr, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
+	CD3DX12_ROOT_PARAMETER rootSigDescParameters;
+	rootSigDescParameters.InitAsConstants(sizeof(Matrix) / sizeof(UINT32), 0, 0, D3D12_SHADER_VISIBILITY_ALL);
+	rootSigDesc.Init(0, &rootSigDescParameters, 0, nullptr, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
 	ComPtr<ID3DBlob> rootSigBlob;
 	D3D12SerializeRootSignature(&rootSigDesc, D3D_ROOT_SIGNATURE_VERSION_1, &rootSigBlob, nullptr);
 	HRESULT hr1 = device->CreateRootSignature(0, rootSigBlob->GetBufferPointer(), rootSigBlob->GetBufferSize(), IID_PPV_ARGS(&rootSignature));
@@ -42,7 +44,7 @@ bool ModuleExercise2::init(){
 	psoDesc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
 	psoDesc.RasterizerState.FrontCounterClockwise = TRUE;
 	psoDesc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
-	device->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&pso));
+	HRESULT hr2 = device->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&pso));
 
 	app->getModuleBuffer()->createDefaultBuffer(vertexBuffer, 9 * sizeof(float));
 	app->getModuleBuffer()->createUploadBuffer(stagingBuffer, 9 * sizeof(float));
@@ -60,8 +62,41 @@ bool ModuleExercise2::init(){
 	// Invalidates the pointer -> probably marks it as "used" ???
 	stagingBuffer.Get()->Unmap(0, nullptr);
 
+	// Init the camera matrices
+	Matrix model = Matrix(
+		transform.scale.x * transform.rotation.x, transform.scale.x * transform.rotation.y, transform.scale.x * transform.rotation.z, transform.position.x,
+		transform.scale.y * transform.rotation.x, transform.scale.x * transform.rotation.y, transform.scale.x * transform.rotation.z, transform.position.y,
+		transform.scale.z * transform.rotation.x, transform.scale.x * transform.rotation.y, transform.scale.x * transform.rotation.z, transform.position.z,
+		0, 0, 0, 1
+	).Transpose();
+
+	Vector3 camForward = Vector3(camera.target - camera.position);
+	camForward.Normalize();
+	Vector3 camRight = camera.up.Cross(camForward);
+	Vector3 camUp = camForward.Cross(camRight);
+	Matrix view = Matrix(
+		camRight.x, camRight.y, camRight.z, -camera.position.Dot(camRight),
+		camUp.x, camUp.y, camUp.z, -camera.position.Dot(camUp),
+		-camForward.x, -camForward.y, -camForward.z, camera.position.Dot(camForward),
+		0, 0, 0, 1
+	).Transpose();
+
+	float projection00 = 1 / ((app->getWindowWidth() / app->getWindowHeight()) * tan(cameraFov / 2));
+	float projection11 = 1 / (tan(cameraFov / 2));
+	float projection22 = farPlane / (nearPlane - farPlane);
+	float projection23 = (farPlane * nearPlane) / (nearPlane - farPlane);
+	Matrix projection = Matrix(
+		projection00, 0, 0, 0,
+		0, projection11, 0, 0,
+		0, 0, projection22, projection23,
+		0, 0, -1, 0
+	).Transpose();
+
+	mvp = (model * view * projection).Transpose();
+
 	ComPtr<ID3D12GraphicsCommandList> copyCommandList = app->getModuleD3D12()->getCopyCommandList();
 	copyCommandList->CopyResource(vertexBuffer.Get(), stagingBuffer.Get());
+	copyCommandList->SetGraphicsRoot32BitConstants(0, sizeof(Matrix) / sizeof(UINT32), &mvp, 0);
 	copyCommandList->Close();
 	ID3D12CommandList* lists[] = { copyCommandList.Get() };
 	app->getModuleD3D12()->getCopyCommandQueue()->ExecuteCommandLists(1, lists);
@@ -71,9 +106,42 @@ bool ModuleExercise2::init(){
 	return true;
 }
 
-void ModuleExercise2::preRender() {}
+void ModuleExercise3::update() {
+	Matrix model = Matrix(
+		transform.scale.x * transform.rotation.x, transform.scale.x * transform.rotation.y, transform.scale.x * transform.rotation.z, transform.position.x,
+		transform.scale.y * transform.rotation.x, transform.scale.x * transform.rotation.y, transform.scale.x * transform.rotation.z, transform.position.y,
+		transform.scale.z * transform.rotation.x, transform.scale.x * transform.rotation.y, transform.scale.x * transform.rotation.z, transform.position.z,
+		0, 0, 0, 1
+	).Transpose();
 
-void ModuleExercise2::render() {
+	Vector3 camForward = Vector3(camera.target - camera.position);
+	camForward.Normalize();
+	Vector3 camRight = camera.up.Cross(camForward);
+	Vector3 camUp = camForward.Cross(camRight);
+	Matrix view = Matrix(
+		camRight.x, camRight.y, camRight.z, -camera.position.Dot(camRight),
+		camUp.x, camUp.y, camUp.z, -camera.position.Dot(camUp),
+		-camForward.x, -camForward.y, -camForward.z, camera.position.Dot(camForward),
+		0, 0, 0, 1
+	).Transpose();
+
+	float projection00 = 1 / ((app->getWindowWidth() / app->getWindowHeight()) * tan(cameraFov / 2));
+	float projection11 = 1 / (tan(cameraFov / 2));
+	float projection22 = farPlane / (nearPlane - farPlane);
+	float projection23 = (farPlane * nearPlane) / (nearPlane - farPlane);
+	Matrix projection = Matrix(
+		projection00, 0, 0, 0,
+		0, projection11, 0, 0,
+		0, 0, projection22, projection23,
+		0, 0, -1, 0
+	).Transpose();
+
+	mvp = model * view * projection;
+}
+
+void ModuleExercise3::preRender() {}
+
+void ModuleExercise3::render() {
 	ComPtr<ID3D12GraphicsCommandList> commandList = app->getModuleD3D12()->getCurrentBufferCommandList();
 
 	commandList->SetPipelineState(pso.Get());
@@ -93,9 +161,9 @@ void ModuleExercise2::render() {
 	commandList->DrawInstanced(3, 1, 0, 0);
 }
 
-void ModuleExercise2::postRender() {}
+void ModuleExercise3::postRender() {}
 
-void ModuleExercise2::createVertexBufferView(D3D12_VERTEX_BUFFER_VIEW* vBV) {
+void ModuleExercise3::createVertexBufferView(D3D12_VERTEX_BUFFER_VIEW* vBV) {
 	vBV->BufferLocation = vertexBuffer->GetGPUVirtualAddress();
 	vBV->SizeInBytes = sizeof(vertices);
 	vBV->StrideInBytes = 3 * sizeof(float);
