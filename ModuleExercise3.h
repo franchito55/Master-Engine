@@ -2,6 +2,8 @@
 #include "Globals.h"
 #include "Module.h"
 
+class DebugDrawPass;
+
 struct Transform {
 	Vector3 position;
 	Vector3 rotation;
@@ -23,6 +25,7 @@ public:
 	void render() override;
 	void postRender() override;
 	void createVertexBufferView(D3D12_VERTEX_BUFFER_VIEW* _vBV);
+	Vector3 getTrianglePosition() { return transform.position; }
 private:
 	HWND hWnd;
 	ComPtr<ID3D12PipelineState> pso = nullptr;
@@ -34,10 +37,30 @@ private:
 
 	float vertices[9] = { 0.0f, 1.0f, 0.0f, -1.0f, -1.0f, 0.0f, 1.0f, -1.0f, 0.0f };
 
-	Transform transform = { Vector3(0.0f, 0.0f, 0.0f), Vector3(0.0f, 0.0f, 0.0f), Vector3(0.0f, 0.0f, 0.0f)};
+	Transform transform = { 
+		// Position
+		Vector3(0.0f, 0.0f, 0.0f), 
+		// Rotation
+		Vector3(0.0f, 0.0f, 0.0f), 
+		// Scale
+		Vector3(1.0f, 1.0f, 1.0f)
+	};
+	float trianglePos[3] = { 0.0f, 0.0f, 0.0f };
+	Matrix model;
+	Matrix view;
+	Matrix projection;
 	Matrix mvp;
-	Camera camera = { Vector3(0.0f, 2.0f, -5.0f), Vector3(0.0f, 0.0f, 0.0f), Vector3(0.0f, 1.0f, 0.0f) };
+	Camera camera = { 
+		// Position
+		Vector3(0.0f, 0.0f, 5.0f), 
+		// Target
+		Vector3(0.0f, 0.0f, 0.0f), 
+		// Up
+		Vector3(0.0f, 1.0f, 0.0f) 
+	};
 	float cameraFov = 90;
 	float nearPlane = 0.1f;
 	float farPlane = 30.0f;
+
+	DebugDrawPass* debugDrawPass;
 };

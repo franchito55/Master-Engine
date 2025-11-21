@@ -5,6 +5,7 @@
 #include "ReadData.h"
 #include "ModuleBuffer.h"
 #include "ImGuiPass.h"
+#include "DebugDrawPass.h"
 
 extern Application* app;
 
@@ -15,7 +16,7 @@ bool ModuleExercise3::init(){
 	CD3DX12_ROOT_SIGNATURE_DESC rootSigDesc = {};
 	CD3DX12_ROOT_PARAMETER rootSigDescParameters;
 	rootSigDescParameters.InitAsConstants(sizeof(Matrix) / sizeof(UINT32), 0, 0, D3D12_SHADER_VISIBILITY_ALL);
-	rootSigDesc.Init(0, &rootSigDescParameters, 0, nullptr, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
+	rootSigDesc.Init(1, &rootSigDescParameters, 0, nullptr, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
 	ComPtr<ID3DBlob> rootSigBlob;
 	D3D12SerializeRootSignature(&rootSigDesc, D3D_ROOT_SIGNATURE_VERSION_1, &rootSigBlob, nullptr);
 	HRESULT hr1 = device->CreateRootSignature(0, rootSigBlob->GetBufferPointer(), rootSigBlob->GetBufferSize(), IID_PPV_ARGS(&rootSignature));
@@ -63,80 +64,36 @@ bool ModuleExercise3::init(){
 	stagingBuffer.Get()->Unmap(0, nullptr);
 
 	// Init the camera matrices
-	Matrix model = Matrix(
-		transform.scale.x * transform.rotation.x, transform.scale.x * transform.rotation.y, transform.scale.x * transform.rotation.z, transform.position.x,
-		transform.scale.y * transform.rotation.x, transform.scale.x * transform.rotation.y, transform.scale.x * transform.rotation.z, transform.position.y,
-		transform.scale.z * transform.rotation.x, transform.scale.x * transform.rotation.y, transform.scale.x * transform.rotation.z, transform.position.z,
-		0, 0, 0, 1
-	).Transpose();
-
-	Vector3 camForward = Vector3(camera.target - camera.position);
-	camForward.Normalize();
-	Vector3 camRight = camera.up.Cross(camForward);
-	Vector3 camUp = camForward.Cross(camRight);
-	Matrix view = Matrix(
-		camRight.x, camRight.y, camRight.z, -camera.position.Dot(camRight),
-		camUp.x, camUp.y, camUp.z, -camera.position.Dot(camUp),
-		-camForward.x, -camForward.y, -camForward.z, camera.position.Dot(camForward),
-		0, 0, 0, 1
-	).Transpose();
-
-	float projection00 = 1 / ((app->getWindowWidth() / app->getWindowHeight()) * tan(cameraFov / 2));
-	float projection11 = 1 / (tan(cameraFov / 2));
-	float projection22 = farPlane / (nearPlane - farPlane);
-	float projection23 = (farPlane * nearPlane) / (nearPlane - farPlane);
-	Matrix projection = Matrix(
-		projection00, 0, 0, 0,
-		0, projection11, 0, 0,
-		0, 0, projection22, projection23,
-		0, 0, -1, 0
-	).Transpose();
+	Matrix model = Matrix::CreateScale(transform.scale) * Matrix::CreateTranslation(transform.position);
+	Matrix view = Matrix::CreateLookAt(camera.position, camera.target, camera.up);
+	Matrix projection = Matrix::CreatePerspectiveFieldOfView(cameraFov, app->getWindowWidth() / app->getWindowHeight(), nearPlane, farPlane);
 
 	mvp = (model * view * projection).Transpose();
 
+	// Copy data (vertex and index buffers) to GPU buffers
 	ComPtr<ID3D12GraphicsCommandList> copyCommandList = app->getModuleD3D12()->getCopyCommandList();
 	copyCommandList->CopyResource(vertexBuffer.Get(), stagingBuffer.Get());
-	copyCommandList->SetGraphicsRoot32BitConstants(0, sizeof(Matrix) / sizeof(UINT32), &mvp, 0);
 	copyCommandList->Close();
 	ID3D12CommandList* lists[] = { copyCommandList.Get() };
 	app->getModuleD3D12()->getCopyCommandQueue()->ExecuteCommandLists(1, lists);
 	app->getModuleD3D12()->getCopyCommandQueue()->Signal(app->getModuleD3D12()->getFence().Get(), 500);
 	app->getModuleD3D12()->WaitForFence(500);
 
+	// Init DebugDrawPass (for drawing axis and stuff)
+	ComPtr<ID3D12Device4> d4;
+	device->QueryInterface(IID_PPV_ARGS(&d4));
+	debugDrawPass = new DebugDrawPass(d4.Get(), app->getModuleD3D12()->getRenderCommandQueue().Get());
 	return true;
 }
 
 void ModuleExercise3::update() {
-	Matrix model = Matrix(
-		transform.scale.x * transform.rotation.x, transform.scale.x * transform.rotation.y, transform.scale.x * transform.rotation.z, transform.position.x,
-		transform.scale.y * transform.rotation.x, transform.scale.x * transform.rotation.y, transform.scale.x * transform.rotation.z, transform.position.y,
-		transform.scale.z * transform.rotation.x, transform.scale.x * transform.rotation.y, transform.scale.x * transform.rotation.z, transform.position.z,
-		0, 0, 0, 1
-	).Transpose();
-
-	Vector3 camForward = Vector3(camera.target - camera.position);
-	camForward.Normalize();
-	Vector3 camRight = camera.up.Cross(camForward);
-	Vector3 camUp = camForward.Cross(camRight);
-	Matrix view = Matrix(
-		camRight.x, camRight.y, camRight.z, -camera.position.Dot(camRight),
-		camUp.x, camUp.y, camUp.z, -camera.position.Dot(camUp),
-		-camForward.x, -camForward.y, -camForward.z, camera.position.Dot(camForward),
-		0, 0, 0, 1
-	).Transpose();
-
-	float projection00 = 1 / ((app->getWindowWidth() / app->getWindowHeight()) * tan(cameraFov / 2));
-	float projection11 = 1 / (tan(cameraFov / 2));
-	float projection22 = farPlane / (nearPlane - farPlane);
-	float projection23 = (farPlane * nearPlane) / (nearPlane - farPlane);
-	Matrix projection = Matrix(
-		projection00, 0, 0, 0,
-		0, projection11, 0, 0,
-		0, 0, projection22, projection23,
-		0, 0, -1, 0
-	).Transpose();
-
-	mvp = model * view * projection;
+	transform.position.x = trianglePos[0];
+	transform.position.y = trianglePos[1];
+	transform.position.z = trianglePos[2];
+	model = Matrix::CreateScale(transform.scale) * Matrix::CreateTranslation(transform.position);
+	view = Matrix::CreateLookAt(camera.position, camera.target, camera.up);
+	projection = Matrix::CreatePerspectiveFieldOfView(cameraFov, app->getWindowWidth() / app->getWindowHeight(), nearPlane, farPlane);
+	mvp = (model * view * projection).Transpose();
 }
 
 void ModuleExercise3::preRender() {}
@@ -151,6 +108,7 @@ void ModuleExercise3::render() {
 	commandList->ClearRenderTargetView(*app->getModuleD3D12()->getCurrentRtvCpuDescriptorHandle(), color, 0, nullptr);
 
 	commandList->SetGraphicsRootSignature(rootSignature.Get());
+	commandList->SetGraphicsRoot32BitConstants(0, sizeof(Matrix) / sizeof(UINT32), &mvp, 0);
 	commandList->IASetVertexBuffers(0, 1, &vBV);
 	D3D12_VIEWPORT vp = { 0.0f, 0.0f, float(app->getWindowWidth()), float(app->getWindowHeight()), 0.0f, 1.0f };
 	commandList->RSSetViewports(1, &vp);
@@ -159,6 +117,15 @@ void ModuleExercise3::render() {
 	commandList->IASetPrimitiveTopology(D3D10_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
 	commandList->DrawInstanced(3, 1, 0, 0);
+
+	// Triangle position window
+	ImGui::Begin("Triangle position");
+	ImGui::DragFloat3("Triangle position", trianglePos, 0.1f, -100.0f, 100.0f);
+	ImGui::End();
+
+	dd::xzSquareGrid(-20.0f, 20.0f, 0.0f, 1.0f, dd::colors::LightGray);
+	dd::axisTriad(ddConvert(Matrix::Identity), 0.1f, 1.0f);
+	debugDrawPass->record(commandList.Get(), app->getWindowWidth(), app->getWindowHeight(), view, projection);
 }
 
 void ModuleExercise3::postRender() {}

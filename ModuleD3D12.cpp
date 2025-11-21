@@ -1,6 +1,7 @@
 #include "Globals.h"
 #include "ModuleD3D12.h"
 #include "ImGuiPass.h"
+#include "ModuleBuffer.h"
 
 extern Application* app;
 
@@ -121,8 +122,36 @@ bool ModuleD3D12::init() {
 	// ============ Init fence event (we'll use the same event for both fences) ============
 	fenceEvent = CreateEventA(nullptr, FALSE, 0, nullptr);
 
+	// ============ Init ImGui wrapper ============
 	imGuiPass = new ImGuiPass(device.Get(), hWnd, {0}, {0});
 
+
+
+	// ============ Init depth & stencil buffer ============
+	CD3DX12_HEAP_PROPERTIES dsbHeapProps = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
+	CD3DX12_RESOURCE_DESC dsbHeapDesc = CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT_D32_FLOAT, app->getWindowWidth(), app->getWindowHeight(), 1, 0, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL);
+	D3D12_CLEAR_VALUE clearValue = {};
+	clearValue.Format = DXGI_FORMAT_D32_FLOAT;
+	clearValue.DepthStencil.Depth = 1.0f;
+	clearValue.DepthStencil.Stencil = 0;
+	device->CreateCommittedResource(&dsbHeapProps, D3D12_HEAP_FLAG_NONE, &dsbHeapDesc, D3D12_RESOURCE_STATE_DEPTH_WRITE, &clearValue, IID_PPV_ARGS(&depthStencilBuffer));
+
+	// ============ Init DSV (depth/stencil view) ============
+	// ============ Init descriptor heap ============ 
+	D3D12_DESCRIPTOR_HEAP_DESC dsbDescriptorHeap = {};
+	// Type = Depth/Stencil View
+	dsbDescriptorHeap.Type = D3D12_DESCRIPTOR_HEAP_TYPE_DSV;
+	// 1 depth buffer
+	dsbDescriptorHeap.NumDescriptors = 1;
+	// Non-shader-visible
+	dsbDescriptorHeap.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
+	// Flags for multi-adapter. Which adapter this descriptor is for
+	dsbDescriptorHeap.NodeMask = 0;
+	device->CreateDescriptorHeap(&dsbDescriptorHeap, IID_PPV_ARGS(&depthBufferDescriptorHeap));
+	D3D12_CPU_DESCRIPTOR_HANDLE dsvRTVCpuHandle;
+	CD3DX12_CPU_DESCRIPTOR_HANDLE::InitOffsetted(dsvRTVCpuHandle, depthBufferDescriptorHeap.Get()->GetCPUDescriptorHandleForHeapStart(), 0, device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV));
+	device->CreateDepthStencilView(depthStencilBuffer.Get(), nullptr, dsvRTVCpuHandle);
+	dsvRTVDescriptorHandle = dsvRTVCpuHandle;
 	return true;
 }
 
@@ -232,11 +261,13 @@ void ModuleD3D12::setResizePending(const RECT &_resizedRect) {
 }
 
 void ModuleD3D12::resizeBuffers() {
-
+	// TODO: resize depth/stencil buffer
+	
 	// Release swap chain buffers
 	for (unsigned int i = 0; i < FRAME_BUFFER_NUM; i++) {
 		buffers[i].Reset();
 	}
+	depthStencilBuffer.Reset();
 
 	swapChain->ResizeBuffers(FRAME_BUFFER_NUM, resizedRect.right - resizedRect.left, resizedRect.bottom - resizedRect.top, DXGI_FORMAT_UNKNOWN, 0);
 	for (unsigned int i = 0; i < FRAME_BUFFER_NUM; i++) {
