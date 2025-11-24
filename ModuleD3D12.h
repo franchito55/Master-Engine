@@ -61,6 +61,7 @@ private:
 	float blue = 0.0f;
 
 	CD3DX12_RESOURCE_BARRIER barrier = {};
+	CD3DX12_RESOURCE_BARRIER depthBufferBarrier = {};
 
 	bool resizePending = false;
 	RECT resizedRect = {};
