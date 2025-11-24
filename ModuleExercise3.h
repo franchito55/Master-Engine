@@ -46,20 +46,22 @@ private:
 		Vector3(1.0f, 1.0f, 1.0f)
 	};
 	float trianglePos[3] = { 0.0f, 0.0f, 0.0f };
+	float cameraEye[3] = { 0.0f, 3.0f, 5.0f };
+	float cameraTarget[3] = { 0.0f, 0.0f, 0.0f };
 	Matrix model;
 	Matrix view;
 	Matrix projection;
 	Matrix mvp;
 	Camera camera = { 
 		// Position
-		Vector3(0.0f, 0.0f, 5.0f), 
+		Vector3(0.0f, 3.0f, 5.0f), 
 		// Target
 		Vector3(0.0f, 0.0f, 0.0f), 
 		// Up
 		Vector3(0.0f, 1.0f, 0.0f) 
 	};
 	float cameraFov = 90;
-	float nearPlane = 0.1f;
+	float nearPlane = 0.02f;
 	float farPlane = 30.0f;
 
 	DebugDrawPass* debugDrawPass;

@@ -1,4 +1,5 @@
 #include "Globals.h"
+#define _USE_MATH_DEFINES
 #include "ModuleExercise3.h"
 #include "Application.h"
 #include "ModuleD3D12.h"
@@ -6,6 +7,7 @@
 #include "ModuleBuffer.h"
 #include "ImGuiPass.h"
 #include "DebugDrawPass.h"
+#include "math.h"
 
 extern Application* app;
 
@@ -66,7 +68,7 @@ bool ModuleExercise3::init(){
 	// Init the camera matrices
 	Matrix model = Matrix::CreateScale(transform.scale) * Matrix::CreateTranslation(transform.position);
 	Matrix view = Matrix::CreateLookAt(camera.position, camera.target, camera.up);
-	Matrix projection = Matrix::CreatePerspectiveFieldOfView(cameraFov, app->getWindowWidth() / app->getWindowHeight(), nearPlane, farPlane);
+	Matrix projection = Matrix::CreatePerspectiveFieldOfView(cameraFov * (M_PI / 180.0f), (float)app->getWindowWidth() / app->getWindowHeight(), nearPlane, farPlane);
 
 	mvp = (model * view * projection).Transpose();
 
@@ -90,9 +92,16 @@ void ModuleExercise3::update() {
 	transform.position.x = trianglePos[0];
 	transform.position.y = trianglePos[1];
 	transform.position.z = trianglePos[2];
+	camera.position.x = cameraEye[0];
+	camera.position.y = cameraEye[1];
+	camera.position.z = cameraEye[2];
+	camera.target.x = cameraTarget[0];
+	camera.target.y = cameraTarget[1];
+	camera.target.z = cameraTarget[2];
 	model = Matrix::CreateScale(transform.scale) * Matrix::CreateTranslation(transform.position);
 	view = Matrix::CreateLookAt(camera.position, camera.target, camera.up);
-	projection = Matrix::CreatePerspectiveFieldOfView(cameraFov, app->getWindowWidth() / app->getWindowHeight(), nearPlane, farPlane);
+
+	projection = Matrix::CreatePerspectiveFieldOfView(cameraFov * (M_PI / 180.0f), (float)app->getWindowWidth() / app->getWindowHeight(), nearPlane, farPlane);
 	mvp = (model * view * projection).Transpose();
 }
 
@@ -121,10 +130,13 @@ void ModuleExercise3::render() {
 	// Triangle position window
 	ImGui::Begin("Triangle position");
 	ImGui::DragFloat3("Triangle position", trianglePos, 0.1f, -100.0f, 100.0f);
+	ImGui::DragFloat3("Camera position", cameraEye, 0.1f, -100.0f, 100.0f);
+	ImGui::DragFloat3("Camera target", cameraTarget, 0.1f, -100.0f, 100.0f);
+	ImGui::DragFloat("Camera FOV", &cameraFov, 1.0f, 1.0f, 120.0f);
 	ImGui::End();
 
 	dd::xzSquareGrid(-20.0f, 20.0f, 0.0f, 1.0f, dd::colors::LightGray);
-	dd::axisTriad(ddConvert(Matrix::Identity), 0.1f, 1.0f);
+	//dd::axisTriad(ddConvert(Matrix::Identity), 0.1f, 1.0f);
 	debugDrawPass->record(commandList.Get(), app->getWindowWidth(), app->getWindowHeight(), view, projection);
 }
 
