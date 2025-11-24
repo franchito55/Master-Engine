@@ -110,10 +110,8 @@ bool ModuleD3D12::init() {
 	// ============ Init descriptors ============
 	for (int i = 0; i < FRAME_BUFFER_NUM; i++) {
 		swapChain->GetBuffer(i, IID_PPV_ARGS(&buffers[i]));
-		D3D12_CPU_DESCRIPTOR_HANDLE rtvCpuHandle;
-		CD3DX12_CPU_DESCRIPTOR_HANDLE::InitOffsetted(rtvCpuHandle, descriptorHeap.Get()->GetCPUDescriptorHandleForHeapStart(), i, device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV));
-		device->CreateRenderTargetView(buffers[i].Get(), nullptr, rtvCpuHandle);
-		rtvDescriptorHandles[i] = rtvCpuHandle;
+		CD3DX12_CPU_DESCRIPTOR_HANDLE::InitOffsetted(rtvDescriptorHandles[i], descriptorHeap.Get()->GetCPUDescriptorHandleForHeapStart(), i, device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV));
+		device->CreateRenderTargetView(buffers[i].Get(), nullptr, rtvDescriptorHandles[i]);
 	}
 
 	// ============ Init fence ============
@@ -127,7 +125,7 @@ bool ModuleD3D12::init() {
 
 
 
-	// ============ Init depth & stencil buffer ============
+	// ============ Init depth & stencil buffers ============
 	CD3DX12_HEAP_PROPERTIES dsbHeapProps = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
 	CD3DX12_RESOURCE_DESC dsbHeapDesc = CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT_D32_FLOAT, app->getWindowWidth(), app->getWindowHeight(), 1, 0, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL);
 	D3D12_CLEAR_VALUE clearValue = {};
@@ -148,10 +146,8 @@ bool ModuleD3D12::init() {
 	// Flags for multi-adapter. Which adapter this descriptor is for
 	dsbDescriptorHeap.NodeMask = 0;
 	device->CreateDescriptorHeap(&dsbDescriptorHeap, IID_PPV_ARGS(&depthBufferDescriptorHeap));
-	D3D12_CPU_DESCRIPTOR_HANDLE dsvRTVCpuHandle;
-	CD3DX12_CPU_DESCRIPTOR_HANDLE::InitOffsetted(dsvRTVCpuHandle, depthBufferDescriptorHeap.Get()->GetCPUDescriptorHandleForHeapStart(), 0, device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV));
-	device->CreateDepthStencilView(depthStencilBuffer.Get(), nullptr, dsvRTVCpuHandle);
-	dsvRTVDescriptorHandle = dsvRTVCpuHandle;
+	CD3DX12_CPU_DESCRIPTOR_HANDLE::InitOffsetted(dsvDescriptorHandle, depthBufferDescriptorHeap.Get()->GetCPUDescriptorHandleForHeapStart(), 0, device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV));
+	device->CreateDepthStencilView(depthStencilBuffer.Get(), nullptr, dsvDescriptorHandle);
 	return true;
 }
 
@@ -267,16 +263,26 @@ void ModuleD3D12::resizeBuffers() {
 	for (unsigned int i = 0; i < FRAME_BUFFER_NUM; i++) {
 		buffers[i].Reset();
 	}
+	// Release DSV
 	depthStencilBuffer.Reset();
 
 	swapChain->ResizeBuffers(FRAME_BUFFER_NUM, resizedRect.right - resizedRect.left, resizedRect.bottom - resizedRect.top, DXGI_FORMAT_UNKNOWN, 0);
 	for (unsigned int i = 0; i < FRAME_BUFFER_NUM; i++) {
 		swapChain->GetBuffer(i, IID_PPV_ARGS(&buffers[i]));
-		D3D12_CPU_DESCRIPTOR_HANDLE rtvCpuHandle;
-		CD3DX12_CPU_DESCRIPTOR_HANDLE::InitOffsetted(rtvCpuHandle, descriptorHeap.Get()->GetCPUDescriptorHandleForHeapStart(), i, device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV));
-		device->CreateRenderTargetView(buffers[i].Get(), nullptr, rtvCpuHandle);
-		rtvDescriptorHandles[i] = rtvCpuHandle;
+		CD3DX12_CPU_DESCRIPTOR_HANDLE::InitOffsetted(rtvDescriptorHandles[i], descriptorHeap.Get()->GetCPUDescriptorHandleForHeapStart(), i, device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV));
+		device->CreateRenderTargetView(buffers[i].Get(), nullptr, rtvDescriptorHandles[i]);
 	}
+
+	// Re-create DSV
+	CD3DX12_HEAP_PROPERTIES dsbHeapProps = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
+	CD3DX12_RESOURCE_DESC dsbHeapDesc = CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT_D32_FLOAT, app->getWindowWidth(), app->getWindowHeight(), 1, 0, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL);
+	D3D12_CLEAR_VALUE clearValue = {};
+	clearValue.Format = DXGI_FORMAT_D32_FLOAT;
+	clearValue.DepthStencil.Depth = 1.0f;
+	clearValue.DepthStencil.Stencil = 0;
+	device->CreateCommittedResource(&dsbHeapProps, D3D12_HEAP_FLAG_NONE, &dsbHeapDesc, D3D12_RESOURCE_STATE_DEPTH_WRITE, &clearValue, IID_PPV_ARGS(&depthStencilBuffer));
+	CD3DX12_CPU_DESCRIPTOR_HANDLE::InitOffsetted(dsvDescriptorHandle, depthBufferDescriptorHeap.Get()->GetCPUDescriptorHandleForHeapStart(), 0, device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV));
+	device->CreateDepthStencilView(depthStencilBuffer.Get(), nullptr, dsvDescriptorHandle);
 	
 	// swapChain->ResizeBuffers() RESETS the swap chain's current back buffer index 
 	// back to 0, so we need to update it here

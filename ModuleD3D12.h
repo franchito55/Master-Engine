@@ -33,7 +33,8 @@ public:
 	ImGuiPass* getImGuiPass() const { return imGuiPass; }
 	const D3D12_CPU_DESCRIPTOR_HANDLE* getCurrentRtvCpuDescriptorHandle() const { return &rtvDescriptorHandles[currentBackBufferIndex]; }
 	ComPtr<ID3D12Fence> getFence() const { return fence; }
-	ComPtr<ID3D12Resource> getDepthStencilBuffer() const { return depthStencilBuffer; }
+	ComPtr<ID3D12Resource2> getDepthStencilBuffer() const { return depthStencilBuffer; }
+	const D3D12_CPU_DESCRIPTOR_HANDLE* getDSVCPUDescriptorHandle() const { return &dsvDescriptorHandle; }
 private:
 	HWND hWnd;
 	ComPtr<IDXGIAdapter4> adapter;
@@ -49,8 +50,8 @@ private:
 	ComPtr<ID3D12DescriptorHeap> descriptorHeap;
 	ComPtr<ID3D12DescriptorHeap> depthBufferDescriptorHeap;
 	D3D12_CPU_DESCRIPTOR_HANDLE rtvDescriptorHandles[FRAME_BUFFER_NUM];
-	D3D12_CPU_DESCRIPTOR_HANDLE dsvRTVDescriptorHandle;
-	ComPtr<ID3D12Resource> depthStencilBuffer;
+	D3D12_CPU_DESCRIPTOR_HANDLE dsvDescriptorHandle;
+	ComPtr<ID3D12Resource2> depthStencilBuffer;
 	unsigned int currentBackBufferIndex = 0;
 	ComPtr<ID3D12Fence1> fence;
 	unsigned int fenceValues[FRAME_BUFFER_NUM] = { 0, 0 };
