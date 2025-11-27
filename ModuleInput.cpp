@@ -15,4 +15,8 @@ ModuleInput::ModuleInput(HWND hWnd)
     mouse->SetWindow(hWnd);
 }
 
+bool ModuleInput::init() {
+    app->setModuleInput(this);
 
+    return true;
+}

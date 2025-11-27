@@ -185,7 +185,7 @@ void ModuleD3D12::preRender() {
 
 	// Set depth buffer view's state back to WRITE
 	depthBufferBarrier = CD3DX12_RESOURCE_BARRIER::Transition(depthStencilBuffer.Get(), D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_DEPTH_WRITE);
-	renderCommandLists[currentBackBufferIndex]->ResourceBarrier(1, &depthBufferBarrier);
+	//renderCommandLists[currentBackBufferIndex]->ResourceBarrier(1, &depthBufferBarrier);
 	renderCommandLists[currentBackBufferIndex]->ClearDepthStencilView(dsvDescriptorHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0.0f, 0, nullptr);
 
 	renderCommandLists[currentBackBufferIndex]->ClearRenderTargetView(rtvDescriptorHandles[currentBackBufferIndex], color, 0, nullptr);

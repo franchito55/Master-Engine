@@ -1,20 +1,9 @@
 #pragma once
 #include "Globals.h"
 #include "Module.h"
+#include "ModuleCameraEditor.h"
 
 class DebugDrawPass;
-
-struct Transform {
-	Vector3 position;
-	Vector3 rotation;
-	Vector3 scale;
-};
-
-struct Camera {
-	Vector3 position;
-	Vector3 target;
-	Vector3 up;
-};
 
 class ModuleExercise3 : public Module {
 public:
@@ -37,32 +26,16 @@ private:
 
 	float vertices[9] = { 0.0f, 1.0f, 0.0f, -1.0f, -1.0f, 0.0f, 1.0f, -1.0f, 0.0f };
 
-	Transform transform = { 
-		// Position
-		Vector3(0.0f, 0.0f, 0.0f), 
-		// Rotation
-		Vector3(0.0f, 0.0f, 0.0f), 
-		// Scale
-		Vector3(1.0f, 1.0f, 1.0f)
-	};
+	Transform transform = {};
+
 	float trianglePos[3] = { 0.0f, 0.0f, 0.0f };
-	float cameraEye[3] = { 0.0f, 3.0f, 5.0f };
-	float cameraTarget[3] = { 0.0f, 0.0f, 0.0f };
 	Matrix model;
-	Matrix view;
-	Matrix projection;
 	Matrix mvp;
-	Camera camera = { 
-		// Position
-		Vector3(0.0f, 3.0f, 5.0f), 
-		// Target
-		Vector3(0.0f, 0.0f, 0.0f), 
-		// Up
-		Vector3(0.0f, 1.0f, 0.0f) 
-	};
 	float cameraFov = 90;
 	float nearPlane = 0.02f;
 	float farPlane = 30.0f;
 
 	DebugDrawPass* debugDrawPass;
+
+	float cameraMoveSpeed = 1.0f;
 };

@@ -10,6 +10,8 @@ class Module;
 class ModuleD3D12;
 class ModuleEditor;
 class ModuleBuffer;
+class ModuleCameraEditor;
+class ModuleInput;
 
 class Application
 {
@@ -41,6 +43,12 @@ public:
     ModuleBuffer* getModuleBuffer() const { return moduleBuffer; }
     void setModuleBuffer(ModuleBuffer* _moduleBuffer) { moduleBuffer = _moduleBuffer; }
 
+    ModuleInput* getModuleInput() const { return moduleInput; }
+    void setModuleInput(ModuleInput* _moduleInput) { moduleInput = _moduleInput; }
+
+    ModuleCameraEditor* getModuleCamera() const { return moduleCamera; }
+    void setModuleCamera(ModuleCameraEditor* _moduleCamera) { moduleCamera = _moduleCamera; }
+
     unsigned int getWindowWidth() const { return windowWidth; }
     void setWindowWidth(const unsigned int _windowWidth) { windowWidth = _windowWidth; }
     unsigned int getWindowHeight() const { return windowHeight; }
@@ -62,6 +70,8 @@ private:
     ModuleD3D12* moduleD3D12 = nullptr;
     ModuleEditor* moduleEditor = nullptr;
     ModuleBuffer* moduleBuffer = nullptr;
+    ModuleInput* moduleInput = nullptr;
+    ModuleCameraEditor* moduleCamera = nullptr;
 
     unsigned int windowWidth;
     unsigned int windowHeight;

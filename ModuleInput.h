@@ -9,6 +9,8 @@ class ModuleInput : public Module
 public:
 
     ModuleInput(HWND hWnd);
+    Keyboard* GetKeyboard() const { return keyboard.get(); }
+    bool init() override;
 
 private:
     std::unique_ptr<Keyboard> keyboard;

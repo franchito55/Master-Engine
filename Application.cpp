@@ -5,7 +5,7 @@
 #include "ModuleEditor.h"
 #include "ModuleBuffer.h"
 #include "ModuleExercise3.h"
-
+#include "ModuleCameraEditor.h"
 
 Application::Application(int argc, wchar_t** argv, void* hWnd)
 {
@@ -13,6 +13,7 @@ Application::Application(int argc, wchar_t** argv, void* hWnd)
     GetClientRect((HWND)hWnd, &windowRect);
     setWindowWidth(windowRect.right - windowRect.left);
     setWindowHeight(windowRect.bottom - windowRect.top);
+    modules.push_back(new ModuleCameraEditor((HWND)hWnd));
     modules.push_back(new ModuleInput((HWND)hWnd));
     modules.push_back(new ModuleD3D12((HWND)hWnd));
     modules.push_back(new ModuleBuffer((HWND)hWnd));
