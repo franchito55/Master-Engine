@@ -38,8 +38,6 @@ private:
 	float fov = 90.0f;
 	float nearPlane = 0.1f;
 	float farPlane = 100.0f;
-
-	float orbitingDistance;
 	
 	float moveSpeed = 0.1f;
 	float rotationSpeed = 0.005f;

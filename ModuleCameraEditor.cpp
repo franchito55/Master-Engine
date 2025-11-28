@@ -33,11 +33,9 @@ void ModuleCameraEditor::update() {
 
 	if (kbState.W) {
 		transform.position += transform.forward * moveSpeed;
-		orbitingDistance -= moveSpeed;
 	}
 	else if (kbState.S) {
 		transform.position -= transform.forward * moveSpeed;
-		orbitingDistance += moveSpeed;
 	}
 	if (kbState.E) {
 		transform.position += transform.up * moveSpeed;
