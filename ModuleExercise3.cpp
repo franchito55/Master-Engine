@@ -52,37 +52,57 @@ bool ModuleExercise3::init(){
 	psoDesc.DepthStencilState = CD3DX12_DEPTH_STENCIL_DESC(D3D12_DEFAULT);
 	HRESULT hr2 = device->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&pso));
 
-	app->getModuleBuffer()->createDefaultBuffer(vertexBuffer, 9 * sizeof(float));
-	app->getModuleBuffer()->createUploadBuffer(stagingBuffer, 9 * sizeof(float));
+	app->getModuleBuffer()->createDefaultBuffer(gpuVertexBuffer, sizeof(vertices));
+	app->getModuleBuffer()->createUploadBuffer(stagingVertexBuffer, sizeof(vertices));
+
+	app->getModuleBuffer()->createDefaultBuffer(gpuIndexBuffer, sizeof(indices));
+	app->getModuleBuffer()->createUploadBuffer(stagingIndexBuffer, sizeof(indices));
 
 	createVertexBufferView(&vBV);
+	createIndexBufferView(&iBV);
 
+	// ============ Init vertex and index buffers ============
 	// Get a pointer to the resource in CPU (pData)
-	BYTE* pData = nullptr;
-	CD3DX12_RANGE readRange(0, 0);
-	HRESULT hr = stagingBuffer.Get()->Map(0, &readRange, reinterpret_cast<void**>(&pData));
+	BYTE* pDataVertex = nullptr;
+	CD3DX12_RANGE readRangeVertex(0, 0);
+	stagingVertexBuffer.Get()->Map(0, &readRangeVertex, reinterpret_cast<void**>(&pDataVertex));
 
 	// Copy the data from the CPU array to the Resource
-	memcpy(pData, vertices, sizeof(vertices));
+	memcpy(pDataVertex, vertices, sizeof(vertices));
 
 	// Invalidates the pointer -> probably marks it as "used" ???
-	stagingBuffer.Get()->Unmap(0, nullptr);
+	stagingVertexBuffer.Get()->Unmap(0, nullptr);
 
-	// Init the camera matrices
+	// Get a pointer to the resource in CPU (pData)
+	BYTE* pDataIndex = nullptr;
+	CD3DX12_RANGE readRangeIndex(0, 0);
+	stagingIndexBuffer.Get()->Map(0, &readRangeIndex, reinterpret_cast<void**>(&pDataIndex));
+
+	// Copy the data from the CPU array to the Resource
+	memcpy(pDataIndex, indices, sizeof(indices));
+
+	// Invalidates the pointer -> probably marks it as "used" ???
+	stagingIndexBuffer.Get()->Unmap(0, nullptr);
+
+
+	// ============ Init the camera matrices ============
 	Matrix model = Matrix::CreateScale(transform.scale) * Matrix::CreateTranslation(transform.position);
 
 	mvp = (model * app->getModuleCamera()->GetViewMatrix() * app->getModuleCamera()->GetProjectionMatrix()).Transpose();
 
-	// Copy data (vertex and index buffers) to GPU buffers
+
+	// ============ Copy data (vertex and index buffers) to GPU buffers ============
 	ComPtr<ID3D12GraphicsCommandList> copyCommandList = app->getModuleD3D12()->getCopyCommandList();
-	copyCommandList->CopyResource(vertexBuffer.Get(), stagingBuffer.Get());
+	copyCommandList->CopyResource(gpuVertexBuffer.Get(), stagingVertexBuffer.Get());
+	copyCommandList->CopyResource(gpuIndexBuffer.Get(), stagingIndexBuffer.Get());
 	copyCommandList->Close();
 	ID3D12CommandList* lists[] = { copyCommandList.Get() };
 	app->getModuleD3D12()->getCopyCommandQueue()->ExecuteCommandLists(1, lists);
 	app->getModuleD3D12()->getCopyCommandQueue()->Signal(app->getModuleD3D12()->getFence().Get(), 500);
 	app->getModuleD3D12()->WaitForFence(500);
 
-	// Init DebugDrawPass (for drawing axis and stuff)
+
+	// ============ Init DebugDrawPass (for drawing axis and stuff) ============
 	ComPtr<ID3D12Device4> d4;
 	device->QueryInterface(IID_PPV_ARGS(&d4));
 	debugDrawPass = new DebugDrawPass(d4.Get(), app->getModuleD3D12()->getRenderCommandQueue().Get());
@@ -113,13 +133,16 @@ void ModuleExercise3::render() {
 	commandList->SetGraphicsRootSignature(rootSignature.Get());
 	commandList->SetGraphicsRoot32BitConstants(0, sizeof(Matrix) / sizeof(UINT32), &mvp, 0);
 	commandList->IASetVertexBuffers(0, 1, &vBV);
+	commandList->IASetIndexBuffer(&iBV);
 	D3D12_VIEWPORT vp = { 0.0f, 0.0f, float(app->getWindowWidth()), float(app->getWindowHeight()), 0.0f, 1.0f };
 	commandList->RSSetViewports(1, &vp);
 	D3D12_RECT scissor = { 0, 0, app->getWindowWidth(), app->getWindowHeight() };
 	commandList->RSSetScissorRects(1, &scissor);
-	commandList->IASetPrimitiveTopology(D3D10_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+	commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
-	commandList->DrawInstanced(3, 1, 0, 0);
+	unsigned int a = sizeof(indices) / sizeof(float);
+	//commandList->DrawInstanced(3, 1, 0, 0);
+	commandList->DrawIndexedInstanced(sizeof(indices) / sizeof(float), 1, 0, 0, 0);
 
 	ModuleCameraEditor* camera = app->getModuleCamera();
 
@@ -149,7 +172,13 @@ void ModuleExercise3::render() {
 void ModuleExercise3::postRender() {}
 
 void ModuleExercise3::createVertexBufferView(D3D12_VERTEX_BUFFER_VIEW* vBV) {
-	vBV->BufferLocation = vertexBuffer->GetGPUVirtualAddress();
+	vBV->BufferLocation = gpuVertexBuffer->GetGPUVirtualAddress();
 	vBV->SizeInBytes = sizeof(vertices);
 	vBV->StrideInBytes = 3 * sizeof(float);
+}
+
+void ModuleExercise3::createIndexBufferView(D3D12_INDEX_BUFFER_VIEW* iBV) {
+	iBV->BufferLocation = gpuIndexBuffer->GetGPUVirtualAddress();
+	iBV->SizeInBytes = sizeof(indices);
+	iBV->Format = DXGI_FORMAT_R32_UINT;
 }
