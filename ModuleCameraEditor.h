@@ -7,7 +7,7 @@ struct Transform {
 	Quaternion rotation = Quaternion::Identity;
 	Vector3 scale = Vector3(1.0f);
 
-	Vector3 forward = Vector3(0.0f, 0.0f, 1.0f);
+	Vector3 forward = Vector3(0.0f, 0.0f, -1.0f);
 	Vector3 right = Vector3(1.0f, 0.0f, 0.0f);
 	Vector3 up = Vector3(0.0f, 1.0f, 0.0f);
 };
@@ -24,9 +24,13 @@ public:
 	void render() override;
 
 	void recalculateRight();
+	void resetState();
 
 private:
-	Transform transform;
+	Transform transform = {};
+
+	// Ideally a Transform* so we can focus on objects
+	Vector3 target = Vector3(0.0f, 0.0f, 0.0f);
 
 	Matrix view;
 	Matrix projection;
@@ -34,7 +38,12 @@ private:
 	float fov = 90.0f;
 	float nearPlane = 0.1f;
 	float farPlane = 100.0f;
+
+	float orbitingDistance;
 	
-	float moveSpeed = 1.0f;
-	float rotationSpeed = 1.0f;
+	float moveSpeed = 0.1f;
+	float rotationSpeed = 0.005f;
+
+	unsigned int previousMouseX = 0;
+	unsigned int previousMouseY = 0;
 };

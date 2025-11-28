@@ -178,11 +178,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     case WM_INPUT:
     case WM_MOUSEMOVE:
     case WM_LBUTTONDOWN:
-        SetWindowText(hWnd, L"Down");
-        break;
     case WM_LBUTTONUP:
-        SetWindowText(hWnd, L"Up");
-        break;
     case WM_RBUTTONDOWN:
     case WM_RBUTTONUP:
     case WM_MBUTTONDOWN:

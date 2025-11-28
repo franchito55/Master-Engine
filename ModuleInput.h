@@ -10,6 +10,7 @@ public:
 
     ModuleInput(HWND hWnd);
     Keyboard* GetKeyboard() const { return keyboard.get(); }
+    Mouse* GetMouse() const { return mouse.get(); }
     bool init() override;
 
 private:
