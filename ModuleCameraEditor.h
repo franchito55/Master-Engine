@@ -41,7 +41,9 @@ private:
 	
 	float moveSpeed = 0.1f;
 	float rotationSpeed = 0.005f;
+	float zoomSpeed = 0.001f;
 
 	unsigned int previousMouseX = 0;
 	unsigned int previousMouseY = 0;
+	int previousScrollWheelValue = 0;
 };

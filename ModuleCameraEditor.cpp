@@ -9,7 +9,7 @@
 #define PI 3.14159265358979323846
 
 ModuleCameraEditor::ModuleCameraEditor(HWND hWnd) {
-	transform.position = Vector3(0.0f, 3.0f, 5.0f);
+	transform.position = Vector3(0.0f, 0.0f, 5.0f);
 	transform.rotation = Quaternion::Identity;
 	transform.forward = Vector3(0.0f, 0.0f, -1.0f);
 	transform.up = Vector3(0.0f, 1.0f, 0.0f);
@@ -26,27 +26,30 @@ void ModuleCameraEditor::update() {
 	Keyboard::State kbState = app->getModuleInput()->GetKeyboard()->GetState();
 	if (kbState.D) {
 		transform.position += transform.right * moveSpeed;
+		target += transform.right * moveSpeed;
 	}
 	else if (kbState.A) {
 		transform.position -= transform.right * moveSpeed;
-	}
-
-	if (kbState.W) {
-		transform.position += transform.forward * moveSpeed;
-	}
-	else if (kbState.S) {
-		transform.position -= transform.forward * moveSpeed;
-	}
-	if (kbState.E) {
-		transform.position += transform.up * moveSpeed;
-	}
-	else if (kbState.Q) {
-		transform.position -= transform.up * moveSpeed;
+		target -= transform.right * moveSpeed;
 	}
 
 	Mouse::State mouseState = app->getModuleInput()->GetMouse()->GetState();
 	int mouseDeltaX = mouseState.x - previousMouseX;
 	int mouseDeltaY = mouseState.y - previousMouseY;
+	int mouseScrollWheelDelta = mouseState.scrollWheelValue - previousScrollWheelValue;
+
+	if (mouseScrollWheelDelta != 0) {
+		transform.position += transform.forward * zoomSpeed * mouseScrollWheelDelta;
+	}
+
+	if (kbState.E) {
+		transform.position += transform.up * moveSpeed;
+		target += transform.up * moveSpeed;
+	}
+	else if (kbState.Q) {
+		transform.position -= transform.up * moveSpeed;
+		target -= transform.up * moveSpeed;
+	}
 
 	if (mouseState.leftButton && mouseDeltaY != 0) {
 		Quaternion rotationDelta = Quaternion::CreateFromAxisAngle(transform.right, rotationSpeed * mouseDeltaY);
@@ -67,14 +70,14 @@ void ModuleCameraEditor::update() {
 		recalculateRight();
 
 		Vector3 targetOffset = target - transform.position;
-		Quaternion targetRotationDelta = Quaternion::CreateFromAxisAngle(transform.right, rotationSpeed * mouseDeltaY);
+		Quaternion targetRotationDelta = Quaternion::CreateFromAxisAngle(transform.right, rotationSpeed * mouseDeltaX);
 		Vector3 rotatedOffset = Vector3::Transform(targetOffset, rotationDelta);
 		target = transform.position + rotatedOffset;
 	}
 
 	if (mouseState.rightButton && mouseDeltaY != 0) {
 		Vector3 offset = transform.position - target;
-		Quaternion rotationDelta = Quaternion::CreateFromAxisAngle(transform.right, rotationSpeed * mouseDeltaY);
+		Quaternion rotationDelta = Quaternion::CreateFromAxisAngle(transform.right, -rotationSpeed * mouseDeltaY);
 		transform.forward = Vector3::Transform(transform.forward, rotationDelta);
 		transform.up = Vector3::Transform(transform.up, rotationDelta);
 		Vector3 rotatedOffset = Vector3::Transform(offset, rotationDelta);
@@ -84,7 +87,7 @@ void ModuleCameraEditor::update() {
 
 	if (mouseState.rightButton && mouseDeltaX != 0) {
 		Vector3 offset = transform.position - target;
-		Quaternion rotationDelta = Quaternion::CreateFromAxisAngle(Vector3(0.0f, 1.0f, 0.0f), rotationSpeed * mouseDeltaX);
+		Quaternion rotationDelta = Quaternion::CreateFromAxisAngle(Vector3(0.0f, 1.0f, 0.0f), -rotationSpeed * mouseDeltaX);
 		transform.forward = Vector3::Transform(transform.forward, rotationDelta);
 		transform.up = Vector3::Transform(transform.up, rotationDelta);
 		Vector3 rotatedOffset = Vector3::Transform(offset, rotationDelta);
@@ -94,6 +97,7 @@ void ModuleCameraEditor::update() {
 
 	previousMouseX = mouseState.x;
 	previousMouseY = mouseState.y;
+	previousScrollWheelValue = mouseState.scrollWheelValue;
 
 	//view = Matrix::CreateWorld(transform.position, transform.forward, transform.up);
 	view = Matrix::CreateLookAt(transform.position, transform.position + transform.forward, transform.up);
@@ -126,6 +130,7 @@ void ModuleCameraEditor::render() {
 	ImGui::DragFloat("FOV", &fov, 1.0f, 5.0f, 120.0f);
 	ImGui::DragFloat("Move speed", &moveSpeed, 0.05f, 0.1f, 2.0f);
 	ImGui::DragFloat("Rotation speed", &rotationSpeed, 0.005f, 0.005f, 2.0f);
+	ImGui::DragFloat("Zoom speed", &zoomSpeed, 0.005f, 0.005f, 2.0f);
 	
 	ImGui::End();
 
