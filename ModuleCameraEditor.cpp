@@ -7,6 +7,8 @@
 #include "DebugDrawPass.h"
 
 #define PI 3.14159265358979323846
+#define MAX_ORBITING_DISTANCE 10.0f
+#define MIN_ORBITING_DISTANCE 0.3f
 
 ModuleCameraEditor::ModuleCameraEditor(HWND hWnd) {
 	transform.position = Vector3(0.0f, 0.0f, 5.0f);
@@ -42,6 +44,14 @@ void ModuleCameraEditor::update() {
 		transform.position -= transform.up * moveSpeed;
 		target -= transform.up * moveSpeed;
 	}
+	if (kbState.W) {
+		transform.position += transform.forward * moveSpeed;
+		target += transform.forward * moveSpeed;
+	}
+	else if (kbState.S) {
+		transform.position -= transform.forward * moveSpeed;
+		target -= transform.forward * moveSpeed;
+	}
 
 
 	Mouse::State mouseState = app->getModuleInput()->GetMouse()->GetState();
@@ -50,10 +60,18 @@ void ModuleCameraEditor::update() {
 	int mouseScrollWheelDelta = mouseState.scrollWheelValue - previousScrollWheelValue;
 
 	if (mouseScrollWheelDelta != 0) {
-		transform.position += transform.forward * zoomSpeed * mouseScrollWheelDelta;
-		currentOrbitingDistance = (target - transform.position).Length();
+		// We have to check if the next distance is <= the current one, since if the user scrolls really hard, it could jump to
+		// the other side of the triangle, bypassing the max zoom
+		Vector3 nextPos = transform.position + transform.forward * zoomSpeed * mouseScrollWheelDelta;
+		float nextDistance = (nextPos - target).Length();
+		bool n = anySignsDiffer(transform.position, nextPos);
+		if ((mouseScrollWheelDelta > 0 && !anySignsDiffer(transform.position, nextPos) && nextDistance >= MIN_ORBITING_DISTANCE) || (mouseScrollWheelDelta < 0 && nextDistance <= MAX_ORBITING_DISTANCE)) {
+			transform.position = nextPos;
+			currentOrbitingDistance = (target - transform.position).Length();
+		}
 	}
 
+	// Don't rotate if modifying the ImGui's drag sliders
 	if (!ImGui::IsAnyItemActive()) {
 		if (mouseState.leftButton && mouseDeltaY != 0) {
 			Quaternion rotationDelta = Quaternion::CreateFromAxisAngle(transform.right, -rotationSpeed * mouseDeltaY);
@@ -124,6 +142,8 @@ void ModuleCameraEditor::render() {
 		ImGui::DragFloat3("Forward", &imGuiForward.x, 0.1f, -20.0f, 20.0f);
 		ImGui::DragFloat3("Up", &imGuiUp.x, 0.1f, -20.0f, 20.0f);
 		ImGui::DragFloat3("Target", &imGuiTarget.x, 0.1f, -20.0f, 20.0f);
+		float dist = (target - transform.position).Length();
+		ImGui::DragFloat("Distance", &dist);
 	}
 	if (ImGui::CollapsingHeader("Parameters")) {
 		ImGui::DragFloat("FOV", &fov, 1.0f, 5.0f, 120.0f);
@@ -183,4 +203,10 @@ void ModuleCameraEditor::resetState() {
 	transform.forward = Vector3(0.0f, 0.0f, -1.0f);
 	transform.up = Vector3(0.0f, 1.0f, 0.0f);
 	recalculateRight();
+}
+
+bool ModuleCameraEditor::anySignsDiffer(Vector3 position1, Vector3 position2) {
+	return ((0 > position1.x) != (0 > position2.x)
+		|| (0 > position1.y) != (0 > position2.y)
+		|| (0 > position1.z) != (0 > position2.z));
 }
