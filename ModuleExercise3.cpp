@@ -9,6 +9,8 @@
 #include "DebugDrawPass.h"
 #include "math.h"
 #include "ModuleCameraEditor.h"
+#include "ModuleInput.h"
+#include "Mouse.h"
 
 extern Application* app;
 
@@ -154,7 +156,7 @@ void ModuleExercise3::render() {
 	dd::axisTriad(ddConvert(Matrix::Identity), 0.05f, 0.5f);
 	float cameraTargetColor[3] = { 1.0f, 0.0f, 0.0f };
 	Vector3 cameraTarget = app->getModuleCamera()->getTarget();
-	dd::sphere(&cameraTarget.x, cameraTargetColor, 0.05f);
+	dd::sphere(&cameraTarget.x, cameraTargetColor, 0.025f);
 }
 
 void ModuleExercise3::postRender() {}
