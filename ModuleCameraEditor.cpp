@@ -22,7 +22,7 @@ bool ModuleCameraEditor::init() {
 	return true;
 }
 
-void ModuleCameraEditor::lateUpdate() {
+void ModuleCameraEditor::update() {
 
 	Mouse::State mouseState = app->getModuleInput()->GetMouse()->GetState();
 	int mouseDeltaX = mouseState.x - previousMouseX;
@@ -101,12 +101,12 @@ void ModuleCameraEditor::lateUpdate() {
 		transform.position -= transform.up * moveSpeed;
 		target -= transform.up * moveSpeed;
 	}
-
-	view = Matrix::CreateLookAt(transform.position, transform.position + transform.forward, transform.up);
-	projection = Matrix::CreatePerspectiveFieldOfView(fov * (PI / 180.0f), (float)app->getWindowWidth() / app->getWindowHeight(), nearPlane, farPlane);
 }
 
 void ModuleCameraEditor::render() {
+
+	view = Matrix::CreateLookAt(transform.position, transform.position + transform.forward, transform.up);
+	projection = Matrix::CreatePerspectiveFieldOfView(fov * (PI / 180.0f), (float)app->getWindowWidth() / app->getWindowHeight(), nearPlane, farPlane);
 
 	ImGui::Begin("Camera");
 	if (ImGui::CollapsingHeader("Vectors")) {
@@ -124,10 +124,6 @@ void ModuleCameraEditor::render() {
 	ImGui::End();
 
 	ImGui::ShowDemoWindow();
-
-	float color[3] = { 1.0f, 0.0f, 0.0f };
-	float ddTarget[3] = { target.x, target.y, target.z };
-	dd::sphere(ddTarget, color, 0.05f);
 }
 
 void ModuleCameraEditor::recalculateRight() {

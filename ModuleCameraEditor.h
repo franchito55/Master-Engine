@@ -18,9 +18,10 @@ public:
 	Transform GetTransform() const { return transform; }
 	Matrix GetViewMatrix() const { return view; }
 	Matrix GetProjectionMatrix() const { return projection; }
+	Vector3 getTarget() const { return target; }
 
 	bool init() override;
-	void lateUpdate() override;
+	void update() override;
 	void render() override;
 
 	void recalculateRight();
@@ -32,8 +33,8 @@ private:
 	// Ideally a Transform* so we can focus on objects
 	Vector3 target = Vector3(0.0f, 0.0f, 0.0f);
 
-	Matrix view;
-	Matrix projection;
+	Matrix view = {};
+	Matrix projection = {};
 
 	float fov = 90.0f;
 	float nearPlane = 0.1f;
