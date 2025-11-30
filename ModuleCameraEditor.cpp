@@ -11,9 +11,10 @@
 #define MIN_ORBITING_DISTANCE 0.3f
 
 ModuleCameraEditor::ModuleCameraEditor(HWND hWnd) {
-	transform.position = Vector3(0.0f, 0.0f, 5.0f);
+	transform.position = Vector3(1.0f, 1.5f, 5.0f);
 	transform.rotation = Quaternion::Identity;
-	transform.forward = Vector3(0.0f, 0.0f, -1.0f);
+	transform.forward = target - transform.position;
+	transform.forward.Normalize();
 	transform.up = Vector3(0.0f, 1.0f, 0.0f);
 	transform.right = transform.up.Cross(transform.forward);
 }
