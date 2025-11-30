@@ -27,6 +27,11 @@ public:
 	void recalculateRight();
 	void resetState();
 
+	void setPosUpdatedViaImGui(bool updated) { posUpdatedViaImGui = updated; }
+	void setForwardUpdatedViaImGui(bool updated) { forwardUpdatedViaImGui = updated; }
+	void setUpUpdatedViaImGui(bool updated) { upUpdatedViaImGui = updated; }
+	void setTargetUpdatedViaImGui(bool updated) { targetUpdatedViaImGui = updated; }
+
 private:
 	Transform transform = {};
 
@@ -46,7 +51,7 @@ private:
 	const float pitchMin = -XM_PIDIV2 + 0.01f;
 	const float pitchMax = XM_PIDIV2 - 0.01f;
 
-	float orbitDistance = 5.0f;
+	float currentOrbitingDistance = 0.0f;
 	
 	float moveSpeed = 0.1f;
 	float rotationSpeed = 0.005f;
@@ -55,4 +60,9 @@ private:
 	unsigned int previousMouseX = 0;
 	unsigned int previousMouseY = 0;
 	int previousScrollWheelValue = 0;
+
+	bool posUpdatedViaImGui = false;
+	bool forwardUpdatedViaImGui = false;
+	bool upUpdatedViaImGui = false;
+	bool targetUpdatedViaImGui = false;
 };

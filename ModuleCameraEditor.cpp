@@ -18,11 +18,31 @@ ModuleCameraEditor::ModuleCameraEditor(HWND hWnd) {
 
 bool ModuleCameraEditor::init() {
 	app->setModuleCamera(this);
+	currentOrbitingDistance = (target - transform.position).Length();
 
 	return true;
 }
 
 void ModuleCameraEditor::update() {
+
+	Keyboard::State kbState = app->getModuleInput()->GetKeyboard()->GetState();
+	if (kbState.D) {
+		transform.position += transform.right * moveSpeed;
+		target += transform.right * moveSpeed;
+	}
+	else if (kbState.A) {
+		transform.position -= transform.right * moveSpeed;
+		target -= transform.right * moveSpeed;
+	}
+	if (kbState.Space) {
+		transform.position += transform.up * moveSpeed;
+		target += transform.up * moveSpeed;
+	}
+	else if (kbState.LeftControl) {
+		transform.position -= transform.up * moveSpeed;
+		target -= transform.up * moveSpeed;
+	}
+
 
 	Mouse::State mouseState = app->getModuleInput()->GetMouse()->GetState();
 	int mouseDeltaX = mouseState.x - previousMouseX;
@@ -31,6 +51,7 @@ void ModuleCameraEditor::update() {
 
 	if (mouseScrollWheelDelta != 0) {
 		transform.position += transform.forward * zoomSpeed * mouseScrollWheelDelta;
+		currentOrbitingDistance = (target - transform.position).Length();
 	}
 
 	if (!ImGui::IsAnyItemActive()) {
@@ -82,38 +103,27 @@ void ModuleCameraEditor::update() {
 	previousMouseX = mouseState.x;
 	previousMouseY = mouseState.y;
 	previousScrollWheelValue = mouseState.scrollWheelValue;
-
-
-	Keyboard::State kbState = app->getModuleInput()->GetKeyboard()->GetState();
-	if (kbState.D) {
-		transform.position += transform.right * moveSpeed;
-		target += transform.right * moveSpeed;
-	}
-	else if (kbState.A) {
-		transform.position -= transform.right * moveSpeed;
-		target -= transform.right * moveSpeed;
-	}
-	if (kbState.E) {
-		transform.position += transform.up * moveSpeed;
-		target += transform.up * moveSpeed;
-	}
-	else if (kbState.Q) {
-		transform.position -= transform.up * moveSpeed;
-		target -= transform.up * moveSpeed;
-	}
 }
 
 void ModuleCameraEditor::render() {
 
-	view = Matrix::CreateLookAt(transform.position, transform.position + transform.forward, transform.up);
-	projection = Matrix::CreatePerspectiveFieldOfView(fov * (PI / 180.0f), (float)app->getWindowWidth() / app->getWindowHeight(), nearPlane, farPlane);
+	Vector3 imGuiPos = transform.position;
+	Vector3 imGuiForward = transform.forward;
+	Vector3 imGuiUp = transform.up;
+	Vector3 imGuiTarget = target;
+
+	// Store current vectors (need to check if modified)
+	Vector3 previousPos = imGuiPos;
+	Vector3 previousForward = imGuiForward;
+	Vector3 previousUp = imGuiUp;
+	Vector3 previousTarget = imGuiTarget;
 
 	ImGui::Begin("Camera");
 	if (ImGui::CollapsingHeader("Vectors")) {
-		ImGui::DragFloat3("Position", &transform.position.x, 0.1f, -20.0f, 20.0f);
-		ImGui::DragFloat3("Forward", &transform.forward.x, 0.1f, -20.0f, 20.0f);
-		ImGui::DragFloat3("Up", &transform.up.x, 0.1f, -20.0f, 20.0f);
-		ImGui::DragFloat3("Target", &target.x, 0.1f, -20.0f, 20.0f);
+		ImGui::DragFloat3("Position", &imGuiPos.x, 0.1f, -20.0f, 20.0f);
+		ImGui::DragFloat3("Forward", &imGuiForward.x, 0.1f, -20.0f, 20.0f);
+		ImGui::DragFloat3("Up", &imGuiUp.x, 0.1f, -20.0f, 20.0f);
+		ImGui::DragFloat3("Target", &imGuiTarget.x, 0.1f, -20.0f, 20.0f);
 	}
 	if (ImGui::CollapsingHeader("Parameters")) {
 		ImGui::DragFloat("FOV", &fov, 1.0f, 5.0f, 120.0f);
@@ -122,8 +132,45 @@ void ModuleCameraEditor::render() {
 		ImGui::DragFloat("Zoom speed", &zoomSpeed, 0.005f, 0.005f, 2.0f);
 	}
 	ImGui::End();
+	
+	if (previousPos != imGuiPos)
+		posUpdatedViaImGui = true;
+	if (previousForward != imGuiForward)
+		forwardUpdatedViaImGui = true;
+	if (previousUp != imGuiUp)
+		upUpdatedViaImGui = true;
+	if (previousTarget != imGuiTarget)
+		targetUpdatedViaImGui = true;
+
+	// Recalculate target in case the user has changed the camera's values via ImGui
+	if (posUpdatedViaImGui || forwardUpdatedViaImGui || upUpdatedViaImGui) {
+		imGuiForward.Normalize();
+		transform.forward = imGuiForward;
+		imGuiUp.Normalize();
+		transform.up = imGuiUp;
+		recalculateRight();
+		target = imGuiPos + imGuiForward * currentOrbitingDistance;
+		transform.position = imGuiPos;
+
+		posUpdatedViaImGui = false;
+		forwardUpdatedViaImGui = false;
+		upUpdatedViaImGui = false;
+	} else if (targetUpdatedViaImGui) {
+		transform.forward = imGuiTarget - imGuiPos;
+		transform.forward.Normalize();
+		transform.right = transform.forward.Cross(Vector3(0.0f, 1.0f, 0.0f));
+		transform.right.Normalize();
+		transform.up = transform.right.Cross(transform.forward);
+		transform.up.Normalize();
+		target = imGuiTarget;
+
+		targetUpdatedViaImGui = false;
+	}
 
 	ImGui::ShowDemoWindow();
+
+	view = Matrix::CreateLookAt(transform.position, transform.position + transform.forward, transform.up);
+	projection = Matrix::CreatePerspectiveFieldOfView(fov * (PI / 180.0f), (float)app->getWindowWidth() / app->getWindowHeight(), nearPlane, farPlane);
 }
 
 void ModuleCameraEditor::recalculateRight() {
