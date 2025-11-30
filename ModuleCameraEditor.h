@@ -65,4 +65,6 @@ private:
 	bool forwardUpdatedViaImGui = false;
 	bool upUpdatedViaImGui = false;
 	bool targetUpdatedViaImGui = false;
+
+	bool anySignsDiffer(Vector3 target, Vector3 position);
 };
