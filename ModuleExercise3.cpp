@@ -134,10 +134,8 @@ void ModuleExercise3::render() {
 	commandList->RSSetViewports(1, &vp);
 	D3D12_RECT scissor = { 0, 0, app->getWindowWidth(), app->getWindowHeight() };
 	commandList->RSSetScissorRects(1, &scissor);
-	commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+	commandList->IASetPrimitiveTopology(D3D10_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
-	unsigned int a = sizeof(indices) / sizeof(float);
-	//commandList->DrawInstanced(3, 1, 0, 0);
 	commandList->DrawIndexedInstanced(sizeof(indices) / sizeof(float), 1, 0, 0, 0);
 
 	ModuleCameraEditor* camera = app->getModuleCamera();
