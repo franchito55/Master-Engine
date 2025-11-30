@@ -20,7 +20,7 @@ public:
 	Matrix GetProjectionMatrix() const { return projection; }
 
 	bool init() override;
-	void update() override;
+	void lateUpdate() override;
 	void render() override;
 
 	void recalculateRight();
@@ -38,10 +38,18 @@ private:
 	float fov = 90.0f;
 	float nearPlane = 0.1f;
 	float farPlane = 100.0f;
+
+	float pitch = 0.0f;
+	float yaw = 0.0f;
+
+	const float pitchMin = -XM_PIDIV2 + 0.01f;
+	const float pitchMax = XM_PIDIV2 - 0.01f;
+
+	float orbitDistance = 5.0f;
 	
 	float moveSpeed = 0.1f;
 	float rotationSpeed = 0.005f;
-	float zoomSpeed = 0.001f;
+	float zoomSpeed = 0.005f;
 
 	unsigned int previousMouseX = 0;
 	unsigned int previousMouseY = 0;

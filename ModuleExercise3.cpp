@@ -125,21 +125,9 @@ void ModuleExercise3::render() {
 
 	float cameraEye[3] = { camera->GetTransform().position.x, camera->GetTransform().position.x,camera->GetTransform().position.x };
 	// Triangle position window
-	ImGui::Begin("Info");
-	if (ImGui::CollapsingHeader("Camera"))
-	{
-		ImGui::DragFloat3("Position", cameraEye, 0.1f, -100.0f, 100.0f);
-		//ImGui::DragFloat3("Target", cameraTarget, 0.1f, -100.0f, 100.0f);
-		ImGui::DragFloat("FOV", &cameraFov, 1.0f, 1.0f, 120.0f);
-	}
-
-	if (ImGui::CollapsingHeader("Triangle"))
-	{
-		ImGui::DragFloat3("Triangle position", trianglePos, 0.1f, -100.0f, 100.0f);
-	}
+	ImGui::Begin("Triangle position");
+	ImGui::DragFloat3("Triangle position", trianglePos, 0.1f, -100.0f, 100.0f);
 	ImGui::End();
-
-	//ImGui::ShowDemoWindow();
 
 	dd::xzSquareGrid(-20.0f, 20.0f, 0.0f, 1.0f, dd::colors::LightGray);
 	dd::axisTriad(ddConvert(Matrix::Identity), 0.05f, 0.5f);

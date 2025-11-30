@@ -66,6 +66,10 @@ void Application::update()
         }
 
         for (int i = 0; i < modules.size(); i++) {
+            modules.at(i)->lateUpdate();
+        }
+
+        for (int i = 0; i < modules.size(); i++) {
             modules.at(i)->preRender();
         }
 
