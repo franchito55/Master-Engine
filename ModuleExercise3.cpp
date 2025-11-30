@@ -109,19 +109,15 @@ bool ModuleExercise3::init(){
 	return true;
 }
 
-void ModuleExercise3::update() {
-	transform.position.x = trianglePos[0];
-	transform.position.y = trianglePos[1];
-	transform.position.z = trianglePos[2];
-
-	model = Matrix::CreateScale(transform.scale) * Matrix::CreateTranslation(transform.position);
-
-	mvp = (model * app->getModuleCamera()->GetViewMatrix() * app->getModuleCamera()->GetProjectionMatrix()).Transpose();
-}
+void ModuleExercise3::update() {}
 
 void ModuleExercise3::preRender() {}
 
 void ModuleExercise3::render() {
+
+	model = Matrix::CreateScale(transform.scale) * Matrix::CreateTranslation(transform.position);
+	mvp = (model * app->getModuleCamera()->GetViewMatrix() * app->getModuleCamera()->GetProjectionMatrix()).Transpose();
+
 	ComPtr<ID3D12GraphicsCommandList> commandList = app->getModuleD3D12()->getCurrentBufferCommandList();
 
 	commandList->SetPipelineState(pso.Get());
@@ -148,25 +144,19 @@ void ModuleExercise3::render() {
 
 	float cameraEye[3] = { camera->GetTransform().position.x, camera->GetTransform().position.x,camera->GetTransform().position.x };
 	// Triangle position window
-	ImGui::Begin("Info");
-	if (ImGui::CollapsingHeader("Camera"))
-	{
-		ImGui::DragFloat3("Position", cameraEye, 0.1f, -100.0f, 100.0f);
-		//ImGui::DragFloat3("Target", cameraTarget, 0.1f, -100.0f, 100.0f);
-		ImGui::DragFloat("FOV", &cameraFov, 1.0f, 1.0f, 120.0f);
-	}
-
-	if (ImGui::CollapsingHeader("Triangle"))
-	{
-		ImGui::DragFloat3("Triangle position", trianglePos, 0.1f, -100.0f, 100.0f);
-	}
+	ImGui::Begin("Triangle position");
+	ImGui::DragFloat3("Triangle position", &transform.position.x, 0.1f, -100.0f, 100.0f);
 	ImGui::End();
 
-	//ImGui::ShowDemoWindow();
-
+	// DebugDrawPass's record() sets the view and projection matrices AT THAT MOMENT, so you actually need to call it BEFORE
+	// calling things like sphere() to avoid a mismatch between frame's informations. If you call sphere() before record(),
+	// the sphere will be drawn using last frame's View and Projection, since they haven't been updated yet
+	debugDrawPass->record(commandList.Get(), app->getWindowWidth(), app->getWindowHeight(), app->getModuleCamera()->GetViewMatrix(), app->getModuleCamera()->GetProjectionMatrix());
 	dd::xzSquareGrid(-20.0f, 20.0f, 0.0f, 1.0f, dd::colors::LightGray);
 	dd::axisTriad(ddConvert(Matrix::Identity), 0.05f, 0.5f);
-	debugDrawPass->record(commandList.Get(), app->getWindowWidth(), app->getWindowHeight(), app->getModuleCamera()->GetViewMatrix(), app->getModuleCamera()->GetProjectionMatrix());
+	float cameraTargetColor[3] = { 1.0f, 0.0f, 0.0f };
+	Vector3 cameraTarget = app->getModuleCamera()->getTarget();
+	dd::sphere(&cameraTarget.x, cameraTargetColor, 0.05f);
 }
 
 void ModuleExercise3::postRender() {}

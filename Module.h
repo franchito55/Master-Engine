@@ -29,6 +29,10 @@ public:
 	{
 	}
 
+	virtual void lateUpdate()
+	{
+	}
+
     virtual void preRender()
     {
     }
