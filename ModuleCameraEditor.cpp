@@ -64,8 +64,7 @@ void ModuleCameraEditor::update() {
 		// the other side of the triangle, bypassing the max zoom
 		Vector3 nextPos = transform.position + transform.forward * zoomSpeed * mouseScrollWheelDelta;
 		float nextDistance = (nextPos - target).Length();
-		bool n = anySignsDiffer(transform.position, nextPos);
-		if ((mouseScrollWheelDelta > 0 && !anySignsDiffer(transform.position, nextPos) && nextDistance >= MIN_ORBITING_DISTANCE) || (mouseScrollWheelDelta < 0 && nextDistance <= MAX_ORBITING_DISTANCE)) {
+		if ((mouseScrollWheelDelta > 0 && !anySignsDiffer(transform.position - target, nextPos - target) && nextDistance >= MIN_ORBITING_DISTANCE) || (mouseScrollWheelDelta < 0 && nextDistance <= MAX_ORBITING_DISTANCE)) {
 			transform.position = nextPos;
 			currentOrbitingDistance = (target - transform.position).Length();
 		}
