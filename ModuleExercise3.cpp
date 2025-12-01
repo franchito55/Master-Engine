@@ -141,5 +141,5 @@ void ModuleExercise3::postRender() {}
 void ModuleExercise3::createVertexBufferView(D3D12_VERTEX_BUFFER_VIEW* vBV) {
 	vBV->BufferLocation = vertexBuffer->GetGPUVirtualAddress();
 	vBV->SizeInBytes = sizeof(vertices);
-	vBV->StrideInBytes = 3 * sizeof(float);
+	vBV->StrideInBytes = FLOATS_PER_VERTEX * sizeof(float);
 }
