@@ -41,11 +41,6 @@ private:
 
 	Matrix model;
 	Matrix mvp;
-	float cameraFov = 90;
-	float nearPlane = 0.02f;
-	float farPlane = 30.0f;
 
 	DebugDrawPass* debugDrawPass;
-
-	float cameraMoveSpeed = 1.0f;
 };

@@ -148,6 +148,19 @@ bool ModuleD3D12::init() {
 	device->CreateDescriptorHeap(&dsbDescriptorHeap, IID_PPV_ARGS(&depthBufferDescriptorHeap));
 	CD3DX12_CPU_DESCRIPTOR_HANDLE::InitOffsetted(dsvDescriptorHandle, depthBufferDescriptorHeap.Get()->GetCPUDescriptorHandleForHeapStart(), 0, device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV));
 	device->CreateDepthStencilView(depthStencilBuffer.Get(), nullptr, dsvDescriptorHandle);
+
+	// ============ Init descriptor heap for shader visible (CBV, SRV, UAV) ============
+	D3D12_DESCRIPTOR_HEAP_DESC shaderVisibleDescriptorHeapDesc = {};
+	// Type = Render Target View
+	descriptorHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+	// How many RTVs (2 -> 1 back buffer, 1 front buffer)
+	descriptorHeapDesc.NumDescriptors = SHADER_VISIBLE_DESCRIPTOR_NUMBER;
+	// Shader-visible ?
+	descriptorHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
+	// Flags for multi-adapter. Which adapter this descriptor is for
+	descriptorHeapDesc.NodeMask = 0;
+	device->CreateDescriptorHeap(&shaderVisibleDescriptorHeapDesc, IID_PPV_ARGS(&shaderVisibleDescriptorHeap));
+
 	return true;
 }
 

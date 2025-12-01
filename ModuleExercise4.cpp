@@ -1,6 +1,6 @@
 #include "Globals.h"
 #define _USE_MATH_DEFINES
-#include "ModuleExercise3.h"
+#include "ModuleExercise4.h"
 #include "Application.h"
 #include "ModuleD3D12.h"
 #include "ReadData.h"
@@ -9,17 +9,19 @@
 #include "DebugDrawPass.h"
 #include "math.h"
 #include "ModuleCameraEditor.h"
+#include "3rdParty/DirectXTex/DirectXTex.h"
 
-extern Application* app;
+ModuleExercise4::ModuleExercise4(HWND _hWnd) : hWnd(_hWnd) {}
 
-ModuleExercise3::ModuleExercise3(HWND _hWnd) : hWnd(_hWnd) {};
-
-bool ModuleExercise3::init(){
+bool ModuleExercise4::init() {
 	ComPtr<ID3D12Device> device = app->getModuleD3D12()->getDevice();
 	CD3DX12_ROOT_SIGNATURE_DESC rootSigDesc = {};
-	CD3DX12_ROOT_PARAMETER rootSigDescParameters;
-	rootSigDescParameters.InitAsConstants(sizeof(Matrix) / sizeof(UINT32), 0, 0, D3D12_SHADER_VISIBILITY_ALL);
-	rootSigDesc.Init(1, &rootSigDescParameters, 0, nullptr, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
+	CD3DX12_ROOT_PARAMETER rootParameters[2];
+	rootParameters[0].InitAsConstants(sizeof(Matrix) / sizeof(UINT32), 0, 0, D3D12_SHADER_VISIBILITY_ALL);
+	rootSigDesc.Init(1, &rootParameters[0], 0, nullptr, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
+	CD3DX12_DESCRIPTOR_RANGE tableRange;
+	tableRange.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0, 0);
+	rootParameters[1].InitAsDescriptorTable(1, &tableRange, D3D12_SHADER_VISIBILITY_PIXEL);
 	ComPtr<ID3DBlob> rootSigBlob;
 	D3D12SerializeRootSignature(&rootSigDesc, D3D_ROOT_SIGNATURE_VERSION_1, &rootSigBlob, nullptr);
 	HRESULT hr1 = device->CreateRootSignature(0, rootSigBlob->GetBufferPointer(), rootSigBlob->GetBufferSize(), IID_PPV_ARGS(&rootSignature));
@@ -30,15 +32,23 @@ bool ModuleExercise3::init(){
 	auto dataPS = DX::ReadData(L"Exercise2PS.cso");
 	psoDesc.VS = { dataVS.data(), dataVS.size() };
 	psoDesc.PS = { dataPS.data(), dataPS.size() };
-	D3D12_INPUT_ELEMENT_DESC layoutDesc = {};
-	layoutDesc.SemanticName = "MY_POS";
-	layoutDesc.SemanticIndex = 0;
-	layoutDesc.Format = DXGI_FORMAT_R32G32B32_FLOAT;
-	layoutDesc.InputSlot = 0;
-	layoutDesc.AlignedByteOffset = 0;
-	layoutDesc.InputSlotClass = D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA;
-	layoutDesc.InstanceDataStepRate = 0;
-	D3D12_INPUT_ELEMENT_DESC layout[] = { layoutDesc };
+	D3D12_INPUT_ELEMENT_DESC layoutDescPos = {};
+	layoutDescPos.SemanticName = "MY_POS";
+	layoutDescPos.SemanticIndex = 0;
+	layoutDescPos.Format = DXGI_FORMAT_R32G32B32_FLOAT;
+	layoutDescPos.InputSlot = 0;
+	layoutDescPos.AlignedByteOffset = 0;
+	layoutDescPos.InputSlotClass = D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA;
+	layoutDescPos.InstanceDataStepRate = 0;
+	D3D12_INPUT_ELEMENT_DESC layoutDescTexCoord = {};
+	layoutDescTexCoord.SemanticName = "TEXCOORD";
+	layoutDescTexCoord.SemanticIndex = 0;
+	layoutDescTexCoord.Format = DXGI_FORMAT_R32G32_FLOAT;
+	layoutDescTexCoord.InputSlot = 0;
+	layoutDescTexCoord.AlignedByteOffset = D3D12_APPEND_ALIGNED_ELEMENT;
+	layoutDescTexCoord.InputSlotClass = D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA;
+	layoutDescTexCoord.InstanceDataStepRate = 0;
+	D3D12_INPUT_ELEMENT_DESC layout[] = { layoutDescPos, layoutDescTexCoord };
 	psoDesc.InputLayout = { layout, sizeof(layout) / sizeof(D3D12_INPUT_ELEMENT_DESC) };
 	psoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
 	psoDesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
@@ -52,21 +62,26 @@ bool ModuleExercise3::init(){
 	psoDesc.DepthStencilState = CD3DX12_DEPTH_STENCIL_DESC(D3D12_DEFAULT);
 	HRESULT hr2 = device->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&pso));
 
-	app->getModuleBuffer()->createDefaultBuffer(vertexBuffer, 3 * FLOATS_PER_VERTEX * sizeof(float));
-	app->getModuleBuffer()->createUploadBuffer(stagingBuffer, 3 * FLOATS_PER_VERTEX * sizeof(float));
+
+	app->getModuleBuffer()->createDefaultBuffer(gpuVertexBuffer, sizeof(vertices));
+	app->getModuleBuffer()->createUploadBuffer(stagingVertexBuffer, sizeof(vertices));
 
 	createVertexBufferView(&vBV);
+
+
+	/*DirectX::LoadFromDDSFile()
+	app->getModuleBuffer()->createDefaultBuffer(gpuTextureBuffer)*/
 
 	// Get a pointer to the resource in CPU (pData)
 	BYTE* pData = nullptr;
 	CD3DX12_RANGE readRange(0, 0);
-	HRESULT hr = stagingBuffer.Get()->Map(0, &readRange, reinterpret_cast<void**>(&pData));
+	HRESULT hr = stagingVertexBuffer.Get()->Map(0, &readRange, reinterpret_cast<void**>(&pData));
 
 	// Copy the data from the CPU array to the Resource
 	memcpy(pData, vertices, sizeof(vertices));
 
 	// Invalidates the pointer -> probably marks it as "used" ???
-	stagingBuffer.Get()->Unmap(0, nullptr);
+	stagingVertexBuffer.Get()->Unmap(0, nullptr);
 
 	// Init the camera matrices
 	Matrix model = Matrix::CreateScale(transform.scale) * Matrix::CreateTranslation(transform.position);
@@ -75,7 +90,7 @@ bool ModuleExercise3::init(){
 
 	// Copy data (vertex and index buffers) to GPU buffers
 	ComPtr<ID3D12GraphicsCommandList> copyCommandList = app->getModuleD3D12()->getCopyCommandList();
-	copyCommandList->CopyResource(vertexBuffer.Get(), stagingBuffer.Get());
+	copyCommandList->CopyResource(gpuVertexBuffer.Get(), stagingVertexBuffer.Get());
 	copyCommandList->Close();
 	ID3D12CommandList* lists[] = { copyCommandList.Get() };
 	app->getModuleD3D12()->getCopyCommandQueue()->ExecuteCommandLists(1, lists);
@@ -86,14 +101,19 @@ bool ModuleExercise3::init(){
 	ComPtr<ID3D12Device4> d4;
 	device->QueryInterface(IID_PPV_ARGS(&d4));
 	debugDrawPass = new DebugDrawPass(d4.Get(), app->getModuleD3D12()->getRenderCommandQueue().Get());
+
+
+
+	
+
 	return true;
 }
 
-void ModuleExercise3::update() {}
+void ModuleExercise4::update() {}
 
-void ModuleExercise3::preRender() {}
+void ModuleExercise4::preRender() {}
 
-void ModuleExercise3::render() {
+void ModuleExercise4::render() {
 
 	model = Matrix::CreateScale(transform.scale) * Matrix::CreateTranslation(transform.position);
 	mvp = (model * app->getModuleCamera()->GetViewMatrix() * app->getModuleCamera()->GetProjectionMatrix()).Transpose();
@@ -103,7 +123,7 @@ void ModuleExercise3::render() {
 	commandList->SetPipelineState(pso.Get());
 
 	commandList->OMSetRenderTargets(1, app->getModuleD3D12()->getCurrentRtvCpuDescriptorHandle(), FALSE, app->getModuleD3D12()->getDSVCPUDescriptorHandle());
-	float color[4] = { 0.2f, 0.2f, 0.2f, 1.0f};
+	float color[4] = { 0.2f, 0.2f, 0.2f, 1.0f };
 	commandList->ClearRenderTargetView(*app->getModuleD3D12()->getCurrentRtvCpuDescriptorHandle(), color, 0, nullptr);
 
 	commandList->SetGraphicsRootSignature(rootSignature.Get());
@@ -115,7 +135,7 @@ void ModuleExercise3::render() {
 	commandList->RSSetScissorRects(1, &scissor);
 	commandList->IASetPrimitiveTopology(D3D10_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
-	commandList->DrawInstanced(3, 1, 0, 0);
+	commandList->DrawInstanced(6, 1, 0, 0);
 
 	ModuleCameraEditor* camera = app->getModuleCamera();
 
@@ -136,10 +156,10 @@ void ModuleExercise3::render() {
 	dd::sphere(&cameraTarget.x, cameraTargetColor, 0.025f);
 }
 
-void ModuleExercise3::postRender() {}
+void ModuleExercise4::postRender() {}
 
-void ModuleExercise3::createVertexBufferView(D3D12_VERTEX_BUFFER_VIEW* vBV) {
-	vBV->BufferLocation = vertexBuffer->GetGPUVirtualAddress();
+void ModuleExercise4::createVertexBufferView(D3D12_VERTEX_BUFFER_VIEW* vBV) {
+	vBV->BufferLocation = gpuVertexBuffer->GetGPUVirtualAddress();
 	vBV->SizeInBytes = sizeof(vertices);
 	vBV->StrideInBytes = FLOATS_PER_VERTEX * sizeof(float);
 }

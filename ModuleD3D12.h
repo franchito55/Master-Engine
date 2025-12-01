@@ -9,6 +9,7 @@ class ImGuiPass;
 #define FRAME_BUFFER_NUM 2
 #define COLOR_CHANGE_RATE_CYCLE 120
 #define FPS_PLOTTING_MAX 60
+#define SHADER_VISIBLE_DESCRIPTOR_NUMBER 1000
 
 class ModuleD3D12 : public Module {
 	typedef struct ResizeStruct {
@@ -49,6 +50,7 @@ private:
 	ComPtr<ID3D12Resource2> buffers[FRAME_BUFFER_NUM];
 	ComPtr<ID3D12DescriptorHeap> descriptorHeap;
 	ComPtr<ID3D12DescriptorHeap> depthBufferDescriptorHeap;
+	ComPtr<ID3D12DescriptorHeap> shaderVisibleDescriptorHeap;
 	D3D12_CPU_DESCRIPTOR_HANDLE rtvDescriptorHandles[FRAME_BUFFER_NUM];
 	D3D12_CPU_DESCRIPTOR_HANDLE dsvDescriptorHandle;
 	ComPtr<ID3D12Resource2> depthStencilBuffer;
