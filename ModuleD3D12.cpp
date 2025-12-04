@@ -40,7 +40,8 @@ bool ModuleD3D12::init() {
 	// ============ Init render command lists ============ 
 	for (int i = 0; i < FRAME_BUFFER_NUM; i++) {
 		device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, renderCommandAllocators[i].Get(), nullptr, IID_PPV_ARGS(&renderCommandLists[i]));
-		renderCommandLists[i]->Close();
+		if (i > 0)
+			renderCommandLists[i]->Close();
 	}
 
 	// ============ Init copy command list ============

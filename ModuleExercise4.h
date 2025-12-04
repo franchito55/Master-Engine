@@ -36,6 +36,8 @@ private:
 	ComPtr<ID3D12Resource> stagingTextureBuffer = nullptr;
 	ComPtr<ID3D12Resource> gpuTextureBuffer = nullptr;
 
+	D3D12_GPU_DESCRIPTOR_HANDLE textureSrvGpuHandle, textureSamplerGpuHandle;
+
 	Vertex vertices[6] = {
 		{ Vector3(-1.0f, 1.0f, 0.0f), Vector2(-0.2f, 1.2f) },
 		{ Vector3(-1.0f, -1.0f, 0.0f), Vector2(-0.2f, -0.2f) },

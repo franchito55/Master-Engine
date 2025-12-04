@@ -1,4 +1,10 @@
-float4 main() : SV_TARGET
+Texture2D colourTex : register(t0);
+SamplerState colourSampler : register(s0);
+struct VertexOutput {
+    float2 texCoords : TEXCOORD;
+    float4 position : SV_POSITION;
+};
+float4 main(VertexOutput vertexOutput) : SV_TARGET
 {
-    return float4(1.0, 0.3, 0.5, 1.0);
+    return colourTex.Sample(colourSampler, vertexOutput.texCoords);
 }

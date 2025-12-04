@@ -9,19 +9,31 @@
 #include "DebugDrawPass.h"
 #include "math.h"
 #include "ModuleCameraEditor.h"
-#include "3rdParty/DirectXTex/DirectXTex.h"
+#include "TextureLoader.h"
 
 ModuleExercise4::ModuleExercise4(HWND _hWnd) : hWnd(_hWnd) {}
 
 bool ModuleExercise4::init() {
 	ComPtr<ID3D12Device> device = app->getModuleD3D12()->getDevice();
+
 	CD3DX12_ROOT_SIGNATURE_DESC rootSigDesc = {};
+
 	CD3DX12_ROOT_PARAMETER rootParameters[2];
+
 	rootParameters[0].InitAsConstants(sizeof(Matrix) / sizeof(UINT32), 0, 0, D3D12_SHADER_VISIBILITY_ALL);
-	rootSigDesc.Init(1, &rootParameters[0], 0, nullptr, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
+
 	CD3DX12_DESCRIPTOR_RANGE tableRange;
-	tableRange.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0, 0);
+	tableRange.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0);
 	rootParameters[1].InitAsDescriptorTable(1, &tableRange, D3D12_SHADER_VISIBILITY_PIXEL);
+
+	CD3DX12_STATIC_SAMPLER_DESC sampler;
+	sampler.Init(0, D3D12_FILTER_MIN_MAG_MIP_LINEAR, // Linear filtering
+		D3D12_TEXTURE_ADDRESS_MODE_WRAP, // Wrap mode
+		D3D12_TEXTURE_ADDRESS_MODE_WRAP,
+		D3D12_TEXTURE_ADDRESS_MODE_WRAP);
+
+	rootSigDesc.Init(2, rootParameters, 1, &sampler, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
+
 	ComPtr<ID3DBlob> rootSigBlob;
 	D3D12SerializeRootSignature(&rootSigDesc, D3D_ROOT_SIGNATURE_VERSION_1, &rootSigBlob, nullptr);
 	HRESULT hr1 = device->CreateRootSignature(0, rootSigBlob->GetBufferPointer(), rootSigBlob->GetBufferSize(), IID_PPV_ARGS(&rootSignature));
@@ -83,6 +95,10 @@ bool ModuleExercise4::init() {
 	// Invalidates the pointer -> probably marks it as "used" ???
 	stagingVertexBuffer.Get()->Unmap(0, nullptr);
 
+	
+	
+	
+	
 	// Init the camera matrices
 	Matrix model = Matrix::CreateScale(transform.scale) * Matrix::CreateTranslation(transform.position);
 
@@ -91,11 +107,7 @@ bool ModuleExercise4::init() {
 	// Copy data (vertex and index buffers) to GPU buffers
 	ComPtr<ID3D12GraphicsCommandList> copyCommandList = app->getModuleD3D12()->getCopyCommandList();
 	copyCommandList->CopyResource(gpuVertexBuffer.Get(), stagingVertexBuffer.Get());
-	copyCommandList->Close();
-	ID3D12CommandList* lists[] = { copyCommandList.Get() };
-	app->getModuleD3D12()->getCopyCommandQueue()->ExecuteCommandLists(1, lists);
-	app->getModuleD3D12()->getCopyCommandQueue()->Signal(app->getModuleD3D12()->getFence().Get(), 500);
-	app->getModuleD3D12()->WaitForFence(500);
+	
 
 	// Init DebugDrawPass (for drawing axis and stuff)
 	ComPtr<ID3D12Device4> d4;
@@ -104,7 +116,43 @@ bool ModuleExercise4::init() {
 
 
 
+
+	DirectX::ScratchImage image;
+	TextureLoader::LoadFromDDSFile(L"C:/Users/franciscobm17/Documents/C++ for Video Games/example_texture.dds", image);
+	DirectX::TexMetadata metaData = image.GetMetadata();
+	D3D12_RESOURCE_DESC texBufferDesc = CD3DX12_RESOURCE_DESC::Tex2D(metaData.format, UINT64(metaData.width),
+		UINT(metaData.height), UINT16(metaData.arraySize),
+		UINT16(metaData.mipLevels));
+
+	app->getModuleBuffer()->createDefaultBuffer(gpuTextureBuffer, texBufferDesc);
+	app->getModuleBuffer()->createUploadBuffer(stagingTextureBuffer, GetRequiredIntermediateSize(gpuTextureBuffer.Get(), 0, image.GetImageCount()));
 	
+	std::vector<D3D12_SUBRESOURCE_DATA> subData;
+	subData.reserve(image.GetImageCount());
+	// Note we are iterating over mipLevels of each array item to respect Subresource index order
+	for (size_t item = 0; item < metaData.arraySize; ++item)
+	{
+		for (size_t level = 0; level < metaData.mipLevels; ++level)
+		{
+			const DirectX::Image* subImg = image.GetImage(level, item, 0);
+			D3D12_SUBRESOURCE_DATA data = { subImg->pixels, subImg->rowPitch, subImg->slicePitch };
+			subData.push_back(data);
+		}
+	}
+	UpdateSubresources(app->getModuleD3D12()->getCurrentBufferCommandList().Get(), gpuTextureBuffer.Get(), stagingTextureBuffer.Get(), 0, 0, UINT(image.GetImageCount()), subData.data());
+	D3D12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition(gpuTextureBuffer.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, D3D12_RESOURCE_BARRIER_FLAG_NONE);
+	app->getModuleD3D12()->getCurrentBufferCommandList()->ResourceBarrier(1, &barrier);
+
+	D3D12_CPU_DESCRIPTOR_HANDLE a = app->getModuleD3D12()->getShaderVisibleDescriptorHeap()->GetCPUDescriptorHandleForHeapStart();
+	app->getModuleD3D12()->getDevice()->CreateShaderResourceView(gpuTextureBuffer.Get(), nullptr, app->getModuleD3D12()->getShaderVisibleDescriptorHeap()->GetCPUDescriptorHandleForHeapStart());
+
+
+
+	copyCommandList->Close();
+	ID3D12CommandList* lists[] = { copyCommandList.Get() };
+	app->getModuleD3D12()->getCopyCommandQueue()->ExecuteCommandLists(1, lists);
+	app->getModuleD3D12()->getCopyCommandQueue()->Signal(app->getModuleD3D12()->getFence().Get(), 500);
+	app->getModuleD3D12()->WaitForFence(500);
 
 	return true;
 }
@@ -134,6 +182,11 @@ void ModuleExercise4::render() {
 	D3D12_RECT scissor = { 0, 0, app->getWindowWidth(), app->getWindowHeight() };
 	commandList->RSSetScissorRects(1, &scissor);
 	commandList->IASetPrimitiveTopology(D3D10_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
+	ID3D12DescriptorHeap* srvHeap[1] = {app->getModuleD3D12()->getShaderVisibleDescriptorHeap().Get()};
+	commandList->SetDescriptorHeaps(1, srvHeap);
+	
+	commandList->SetGraphicsRootDescriptorTable(1, app->getModuleD3D12()->getShaderVisibleDescriptorHeap()->GetGPUDescriptorHandleForHeapStart());
 
 	commandList->DrawInstanced(6, 1, 0, 0);
 

@@ -36,6 +36,7 @@ public:
 	ComPtr<ID3D12Fence> getFence() const { return fence; }
 	ComPtr<ID3D12Resource2> getDepthStencilBuffer() const { return depthStencilBuffer; }
 	const D3D12_CPU_DESCRIPTOR_HANDLE* getDSVCPUDescriptorHandle() const { return &dsvDescriptorHandle; }
+	ComPtr<ID3D12DescriptorHeap> getShaderVisibleDescriptorHeap() const { return shaderVisibleDescriptorHeap; }
 private:
 	HWND hWnd;
 	ComPtr<IDXGIAdapter4> adapter;
