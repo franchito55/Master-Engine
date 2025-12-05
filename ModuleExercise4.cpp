@@ -118,7 +118,7 @@ bool ModuleExercise4::init() {
 
 
 	DirectX::ScratchImage image;
-	TextureLoader::LoadFromDDSFile(L"C:/Users/franciscobm17/Documents/C++ for Video Games/example_texture.dds", image);
+	TextureLoader::LoadFromDDSFile(L"../example_texture.dds", image);
 	DirectX::TexMetadata metaData = image.GetMetadata();
 	D3D12_RESOURCE_DESC texBufferDesc = CD3DX12_RESOURCE_DESC::Tex2D(metaData.format, UINT64(metaData.width),
 		UINT(metaData.height), UINT16(metaData.arraySize),
@@ -143,8 +143,18 @@ bool ModuleExercise4::init() {
 	D3D12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition(gpuTextureBuffer.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, D3D12_RESOURCE_BARRIER_FLAG_NONE);
 	app->getModuleD3D12()->getCurrentBufferCommandList()->ResourceBarrier(1, &barrier);
 
-	D3D12_CPU_DESCRIPTOR_HANDLE a = app->getModuleD3D12()->getShaderVisibleDescriptorHeap()->GetCPUDescriptorHandleForHeapStart();
-	app->getModuleD3D12()->getDevice()->CreateShaderResourceView(gpuTextureBuffer.Get(), nullptr, app->getModuleD3D12()->getShaderVisibleDescriptorHeap()->GetCPUDescriptorHandleForHeapStart());
+	D3D12_SHADER_RESOURCE_VIEW_DESC texSrvDesc = {};
+	texSrvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+	texSrvDesc.Format = gpuTextureBuffer->GetDesc().Format;
+	texSrvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+	texSrvDesc.Texture2D.MipLevels = gpuTextureBuffer->GetDesc().MipLevels;
+
+	CD3DX12_CPU_DESCRIPTOR_HANDLE texCPUHandle(
+		app->getModuleD3D12()->getShaderVisibleDescriptorHeap()->GetCPUDescriptorHandleForHeapStart(),
+		0,
+		device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV)
+	);
+	app->getModuleD3D12()->getDevice()->CreateShaderResourceView(gpuTextureBuffer.Get(), &texSrvDesc, texCPUHandle);
 
 
 

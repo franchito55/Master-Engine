@@ -153,13 +153,13 @@ bool ModuleD3D12::init() {
 	// ============ Init descriptor heap for shader visible (CBV, SRV, UAV) ============
 	D3D12_DESCRIPTOR_HEAP_DESC shaderVisibleDescriptorHeapDesc = {};
 	// Type = Render Target View
-	descriptorHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+	shaderVisibleDescriptorHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
 	// How many RTVs (2 -> 1 back buffer, 1 front buffer)
-	descriptorHeapDesc.NumDescriptors = SHADER_VISIBLE_DESCRIPTOR_NUMBER;
+	shaderVisibleDescriptorHeapDesc.NumDescriptors = SHADER_VISIBLE_DESCRIPTOR_NUMBER;
 	// Shader-visible ?
-	descriptorHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
+	shaderVisibleDescriptorHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
 	// Flags for multi-adapter. Which adapter this descriptor is for
-	descriptorHeapDesc.NodeMask = 0;
+	shaderVisibleDescriptorHeapDesc.NodeMask = 0;
 	device->CreateDescriptorHeap(&shaderVisibleDescriptorHeapDesc, IID_PPV_ARGS(&shaderVisibleDescriptorHeap));
 
 	return true;

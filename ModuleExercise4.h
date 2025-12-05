@@ -39,12 +39,12 @@ private:
 	D3D12_GPU_DESCRIPTOR_HANDLE textureSrvGpuHandle, textureSamplerGpuHandle;
 
 	Vertex vertices[6] = {
-		{ Vector3(-1.0f, 1.0f, 0.0f), Vector2(-0.2f, 1.2f) },
-		{ Vector3(-1.0f, -1.0f, 0.0f), Vector2(-0.2f, -0.2f) },
-		{ Vector3(1.0f, -1.0f, 0.0f), Vector2(1.2f, -0.2f) },
-		{ Vector3(-1.0f, 1.0f, 0.0f), Vector2(-0.2f, 1.2f) },
-		{ Vector3(1.0f, -1.0f, 0.0f), Vector2(1.2f, -0.2f) },
-		{ Vector3(1.0f, 1.0f, 0.0f), Vector2(1.2f, 1.2f) }
+		{ Vector3(-1.0f, 1.0f, 0.0f), Vector2(0.0f, -1.0f) },
+		{ Vector3(-1.0f, -1.0f, 0.0f), Vector2(-0.0f, 0.0f) },
+		{ Vector3(1.0f, -1.0f, 0.0f), Vector2(1.0f, 0.0f) },
+		{ Vector3(-1.0f, 1.0f, 0.0f), Vector2(-0.0f, -1.0f) },
+		{ Vector3(1.0f, -1.0f, 0.0f), Vector2(1.0f, 0.0f) },
+		{ Vector3(1.0f, 1.0f, 0.0f), Vector2(1.0f, -1.0f) }
 	};
 
 	Transform transform = {};
