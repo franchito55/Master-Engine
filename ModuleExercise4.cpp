@@ -81,9 +81,6 @@ bool ModuleExercise4::init() {
 	createVertexBufferView(&vBV);
 
 
-	/*DirectX::LoadFromDDSFile()
-	app->getModuleBuffer()->createDefaultBuffer(gpuTextureBuffer)*/
-
 	// Get a pointer to the resource in CPU (pData)
 	BYTE* pData = nullptr;
 	CD3DX12_RANGE readRange(0, 0);
@@ -94,8 +91,6 @@ bool ModuleExercise4::init() {
 
 	// Invalidates the pointer -> probably marks it as "used" ???
 	stagingVertexBuffer.Get()->Unmap(0, nullptr);
-
-	
 	
 	
 	
