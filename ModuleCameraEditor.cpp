@@ -29,31 +29,6 @@ bool ModuleCameraEditor::init() {
 void ModuleCameraEditor::update() {
 
 	Keyboard::State kbState = app->getModuleInput()->GetKeyboard()->GetState();
-	if (kbState.D) {
-		transform.position += transform.right * moveSpeed;
-		target += transform.right * moveSpeed;
-	}
-	else if (kbState.A) {
-		transform.position -= transform.right * moveSpeed;
-		target -= transform.right * moveSpeed;
-	}
-	if (kbState.Space) {
-		transform.position += transform.up * moveSpeed;
-		target += transform.up * moveSpeed;
-	}
-	else if (kbState.LeftControl) {
-		transform.position -= transform.up * moveSpeed;
-		target -= transform.up * moveSpeed;
-	}
-	if (kbState.W) {
-		transform.position += transform.forward * moveSpeed;
-		target += transform.forward * moveSpeed;
-	}
-	else if (kbState.S) {
-		transform.position -= transform.forward * moveSpeed;
-		target -= transform.forward * moveSpeed;
-	}
-
 
 	Mouse::State mouseState = app->getModuleInput()->GetMouse()->GetState();
 	int mouseDeltaX = mouseState.x - previousMouseX;
@@ -72,49 +47,78 @@ void ModuleCameraEditor::update() {
 	}
 
 	// Don't rotate if modifying the ImGui's drag sliders
-	if (!ImGui::IsAnyItemActive()) {
-		if (mouseState.leftButton && mouseDeltaY != 0) {
+	if (!ImGui::IsAnyItemActive() && kbState.LeftAlt) {
+
+		if (mouseDeltaY != 0) {
+			Vector3 offset = transform.position - target;
+			Quaternion rotationDelta = Quaternion::CreateFromAxisAngle(transform.right, -rotationSpeed * mouseDeltaY);
+			transform.forward = Vector3::Transform(transform.forward, rotationDelta);
+			transform.up = Vector3::Transform(transform.up, rotationDelta);
+			Vector3 rotatedOffset = Vector3::Transform(offset, rotationDelta);
+			transform.position = target + rotatedOffset;
+			recalculateRight();
+		}
+
+		if (mouseDeltaX != 0) {
+			Vector3 offset = transform.position - target;
+			Quaternion rotationDelta = Quaternion::CreateFromAxisAngle(Vector3(0.0f, 1.0f, 0.0f), -rotationSpeed * mouseDeltaX);
+			transform.forward = Vector3::Transform(transform.forward, rotationDelta);
+			transform.up = Vector3::Transform(transform.up, rotationDelta);
+			Vector3 rotatedOffset = Vector3::Transform(offset, rotationDelta);
+			transform.position = target + rotatedOffset;
+			recalculateRight();
+		}
+	}
+
+	Vector3 prevTarget = target;
+	if (mouseState.rightButton) {
+		if (kbState.D) {
+			transform.position += transform.right * moveSpeed;
+			target += transform.right * moveSpeed;
+		}
+		else if (kbState.A) {
+			transform.position -= transform.right * moveSpeed;
+			target -= transform.right * moveSpeed;
+		}
+		if (kbState.Space) {
+			transform.position += transform.up * moveSpeed;
+			target += transform.up * moveSpeed;
+		}
+		else if (kbState.LeftControl) {
+			transform.position -= transform.up * moveSpeed;
+			target -= transform.up * moveSpeed;
+		}
+		if (kbState.W) {
+			transform.position += transform.forward * moveSpeed;
+			target += transform.forward * moveSpeed;
+		}
+		else if (kbState.S) {
+			transform.position -= transform.forward * moveSpeed;
+			target -= transform.forward * moveSpeed;
+		}
+
+		if (mouseDeltaY != 0) {
 			Quaternion rotationDelta = Quaternion::CreateFromAxisAngle(transform.right, -rotationSpeed * mouseDeltaY);
 			transform.forward = Vector3::Transform(transform.forward, rotationDelta);
 			transform.up = Vector3::Transform(transform.up, rotationDelta);
 			recalculateRight();
 
-			Vector3 targetOffset = target - transform.position;
+			Vector3 targetOffset = prevTarget - transform.position;
 			Quaternion targetRotationDelta = Quaternion::CreateFromAxisAngle(transform.right, -rotationSpeed * mouseDeltaY);
 			Vector3 rotatedOffset = Vector3::Transform(targetOffset, rotationDelta);
 			target = transform.position + rotatedOffset;
 		}
 
-		if (mouseState.leftButton && mouseDeltaX != 0) {
+		if (mouseDeltaX != 0) {
 			Quaternion rotationDelta = Quaternion::CreateFromAxisAngle(Vector3(0.0f, 1.0f, 0.0f), -rotationSpeed * mouseDeltaX);
 			transform.forward = Vector3::Transform(transform.forward, rotationDelta);
 			transform.up = Vector3::Transform(transform.up, rotationDelta);
 			recalculateRight();
 
-			Vector3 targetOffset = target - transform.position;
+			Vector3 targetOffset = prevTarget - transform.position;
 			Quaternion targetRotationDelta = Quaternion::CreateFromAxisAngle(transform.right, -rotationSpeed * mouseDeltaX);
 			Vector3 rotatedOffset = Vector3::Transform(targetOffset, rotationDelta);
 			target = transform.position + rotatedOffset;
-		}
-
-		if (mouseState.rightButton && mouseDeltaY != 0) {
-			Vector3 offset = transform.position - target;
-			Quaternion rotationDelta = Quaternion::CreateFromAxisAngle(transform.right, -rotationSpeed * mouseDeltaY);
-			transform.forward = Vector3::Transform(transform.forward, rotationDelta);
-			transform.up = Vector3::Transform(transform.up, rotationDelta);
-			Vector3 rotatedOffset = Vector3::Transform(offset, rotationDelta);
-			transform.position = target + rotatedOffset;
-			recalculateRight();
-		}
-
-		if (mouseState.rightButton && mouseDeltaX != 0) {
-			Vector3 offset = transform.position - target;
-			Quaternion rotationDelta = Quaternion::CreateFromAxisAngle(Vector3(0.0f, 1.0f, 0.0f), -rotationSpeed * mouseDeltaX);
-			transform.forward = Vector3::Transform(transform.forward, rotationDelta);
-			transform.up = Vector3::Transform(transform.up, rotationDelta);
-			Vector3 rotatedOffset = Vector3::Transform(offset, rotationDelta);
-			transform.position = target + rotatedOffset;
-			recalculateRight();
 		}
 	}
 

@@ -113,7 +113,7 @@ bool ModuleExercise4::init() {
 
 
 	DirectX::ScratchImage image;
-	TextureLoader::LoadFromDDSFile(L"../example_texture.dds", image);
+	TextureLoader::LoadFromDDSFile(L"../dog.dds", image);
 	DirectX::TexMetadata metaData = image.GetMetadata();
 	D3D12_RESOURCE_DESC texBufferDesc = CD3DX12_RESOURCE_DESC::Tex2D(metaData.format, UINT64(metaData.width),
 		UINT(metaData.height), UINT16(metaData.arraySize),
