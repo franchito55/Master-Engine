@@ -89,7 +89,7 @@ bool ModuleAssignment1::init() {
 	// Init DebugDrawPass (for drawing axis and stuff)
 	ComPtr<ID3D12Device4> d4;
 	device->QueryInterface(IID_PPV_ARGS(&d4));
-	debugDrawPass = new DebugDrawPass(d4.Get(), app->getModuleD3D12()->getRenderCommandQueue().Get());
+	debugDrawPass = new DebugDrawPass(d4.Get(), app->getModuleD3D12()->getRenderCommandQueue().Get(), false);
 
 
 
@@ -222,9 +222,6 @@ void ModuleAssignment1::render() {
 	float cameraTargetColor[3] = { 1.0f, 0.0f, 0.0f };
 	Vector3 cameraTarget = app->getModuleCamera()->getTarget();
 	dd::sphere(&cameraTarget.x, cameraTargetColor, 0.025f);
-
-	Matrix v = app->getModuleCamera()->GetViewMatrix();
-	Matrix p = app->getModuleCamera()->GetProjectionMatrix();
 
 	debugDrawPass->record(commandList.Get(), app->getWindowWidth(), app->getWindowHeight(), app->getModuleCamera()->GetViewMatrix(), app->getModuleCamera()->GetProjectionMatrix());
 }

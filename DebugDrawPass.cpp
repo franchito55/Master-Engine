@@ -1,4 +1,6 @@
 #define DEBUG_DRAW_IMPLEMENTATION
+#define DEBUG_DRAW_VERTEX_BUFFER_SIZE 32768
+#define DEBUG_DRAW_MAX_LINES 65536
 
 #include "Globals.h"
 #include "DebugDrawPass.h"
@@ -94,7 +96,7 @@ class DDRenderInterfaceCoreD3D12 final : public dd::RenderInterface
 public:
     friend class DebugDrawPass;
 
-    DDRenderInterfaceCoreD3D12(ID3D12Device4* _device, ID3D12CommandQueue* _uploadQueue, D3D12_CPU_DESCRIPTOR_HANDLE cpuText, D3D12_GPU_DESCRIPTOR_HANDLE gpuText)
+    DDRenderInterfaceCoreD3D12(ID3D12Device4* _device, ID3D12CommandQueue* _uploadQueue, bool useMSAA, D3D12_CPU_DESCRIPTOR_HANDLE cpuText, D3D12_GPU_DESCRIPTOR_HANDLE gpuText)
     {
         device = _device;
         uploadQueue = _uploadQueue;
@@ -103,8 +105,8 @@ public:
 
         setupLinePointVertexBuffers();
         setupUploadCommandBuffer();
-        setupLinePointPipeline();
-        setupTextPipeline();
+        setupLinePointPipeline(useMSAA);
+        setupTextPipeline(useMSAA);
         setupTextVertexBuffers();
     }
 
@@ -122,7 +124,7 @@ public:
         uploadEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
     }
 
-    void setupTextPipeline()
+    void setupTextPipeline(bool useMSAA)
     {
         ComPtr<ID3DBlob> errorBuff;
 
@@ -164,7 +166,7 @@ public:
         textPSODesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
         textPSODesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
         textPSODesc.DSVFormat = DXGI_FORMAT_D32_FLOAT;
-        textPSODesc.SampleDesc = { 1, 0 };
+        textPSODesc.SampleDesc = { useMSAA ? UINT(4) : UINT(1) , 0 };
         textPSODesc.SampleMask = 0xffffffff;
         textPSODesc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
         textPSODesc.NumRenderTargets = 1;
@@ -185,7 +187,7 @@ public:
         device->CreateGraphicsPipelineState(&textPSODesc, IID_PPV_ARGS(&textPSO));
     }
 
-    void setupLinePointPipeline()
+    void setupLinePointPipeline(bool useMSAA)
     {
         ComPtr<ID3DBlob> errorBuff;
 
@@ -221,7 +223,7 @@ public:
         pointPSODesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_POINT;
         pointPSODesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
         pointPSODesc.DSVFormat = DXGI_FORMAT_D32_FLOAT;
-        pointPSODesc.SampleDesc = { 1, 0 };
+        pointPSODesc.SampleDesc = { useMSAA ? UINT(4) : UINT(1), 0 };
         pointPSODesc.SampleMask = 0xffffffff;
         pointPSODesc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
         pointPSODesc.DepthStencilState = CD3DX12_DEPTH_STENCIL_DESC(D3D12_DEFAULT);
@@ -275,7 +277,7 @@ public:
 
     void recordCommands(const dd::DrawVertex* vertices, int count, ID3D12Resource* vertexBuffer, const D3D12_VERTEX_BUFFER_VIEW& vertexBufferView, 
                         ID3D12PipelineState* pso, ID3D12RootSignature* signature, void* rootConstants, uint32_t rootConstantsSize,
-                        D3D_PRIMITIVE_TOPOLOGY topology, size_t& memoryOffset, bool isText)
+                        D3D_PRIMITIVE_TOPOLOGY topology, UINT& memoryOffset, bool isText)
     {
         size_t freeSpace = DEBUG_DRAW_VERTEX_BUFFER_SIZE - memoryOffset;
         if (freeSpace < count)
@@ -287,12 +289,14 @@ public:
         if (freeSpace > count)
         {
             BYTE* uploadData = nullptr;
-            D3D12_RANGE range = { memoryOffset * sizeof(dd::DrawVertex), memoryOffset * sizeof(dd::DrawVertex) + sizeof(dd::DrawVertex) * count };
-            vertexBuffer->Map(0, &range, (void**)&uploadData);
-            memcpy(uploadData, vertices, sizeof(dd::DrawVertex) * count);
-            vertexBuffer->Unmap(0, nullptr);
+            
+            D3D12_RANGE readRange = { 0, 0 };
+            vertexBuffer->Map(0, &readRange, (void**)&uploadData);
 
-            memoryOffset += count;
+            memcpy(uploadData + memoryOffset * sizeof(dd::DrawVertex), vertices, sizeof(dd::DrawVertex) * count);
+
+            D3D12_RANGE writeRange = { memoryOffset * sizeof(dd::DrawVertex), memoryOffset * sizeof(dd::DrawVertex) + sizeof(dd::DrawVertex) * count };
+            vertexBuffer->Unmap(0, &writeRange);
 
             D3D12_VIEWPORT viewport;
             viewport.TopLeftX = viewport.TopLeftY = 0;
@@ -319,7 +323,9 @@ public:
             {
                 commandList->SetGraphicsRootDescriptorTable(1, gpuTextHandle);
             }
-            commandList->DrawInstanced(count, 1, 0, 0);
+            commandList->DrawInstanced(count, 1, memoryOffset, 0);
+            
+            memoryOffset += count;
         }
     }
 
@@ -434,17 +440,17 @@ private:
     ComPtr<ID3D12Resource>       lineBuffer;
     D3D12_VERTEX_BUFFER_VIEW     lineBufferView;
     void*                        linePtr    = nullptr;
-    size_t                       lineOffset = 0;
+    UINT                         lineOffset = 0;
 
     ComPtr<ID3D12Resource>       pointBuffer;
     D3D12_VERTEX_BUFFER_VIEW     pointBufferView;
     void*                        pointPtr    = nullptr;
-    size_t                       pointOffset = 0;
+    UINT                         pointOffset = 0;
 
     ComPtr<ID3D12Resource>       textBuffer;
     D3D12_VERTEX_BUFFER_VIEW     textBufferView;
     void*                        textPtr    = nullptr;
-    size_t                       textOffset = 0;
+    UINT                         textOffset = 0;
 
     ComPtr<ID3D12RootSignature>  pointLineSignature;
     ComPtr<ID3D12PipelineState>  pointPSO;
@@ -462,9 +468,9 @@ private:
 DDRenderInterfaceCoreD3D12* DebugDrawPass::implementation = 0;
 
 DebugDrawPass::DebugDrawPass(ID3D12Device4* device, ID3D12CommandQueue* uploadQueue, 
-                             D3D12_CPU_DESCRIPTOR_HANDLE cpuText, D3D12_GPU_DESCRIPTOR_HANDLE gpuText)
+                             bool useMSAA, D3D12_CPU_DESCRIPTOR_HANDLE cpuText, D3D12_GPU_DESCRIPTOR_HANDLE gpuText)
 {    
-    implementation = new DDRenderInterfaceCoreD3D12(device, uploadQueue, cpuText, gpuText);
+    implementation = new DDRenderInterfaceCoreD3D12(device, uploadQueue, useMSAA, cpuText, gpuText);
     dd::initialize(implementation);
 }
 

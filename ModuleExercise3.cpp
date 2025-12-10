@@ -85,7 +85,7 @@ bool ModuleExercise3::init(){
 	// Init DebugDrawPass (for drawing axis and stuff)
 	ComPtr<ID3D12Device4> d4;
 	device->QueryInterface(IID_PPV_ARGS(&d4));
-	debugDrawPass = new DebugDrawPass(d4.Get(), app->getModuleD3D12()->getRenderCommandQueue().Get());
+	debugDrawPass = new DebugDrawPass(d4.Get(), app->getModuleD3D12()->getRenderCommandQueue().Get(), false);
 	return true;
 }
 

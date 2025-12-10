@@ -6,6 +6,7 @@
 #include "Mouse.h"
 #include "DebugDrawPass.h"
 #include "ModuleAssignment1.h"
+#include <algorithm>
 
 #define PI 3.14159265358979323846
 #define MAX_ORBITING_DISTANCE 10.0f
@@ -128,6 +129,7 @@ void ModuleCameraEditor::update() {
 
 		// ONLY THEN update the target's position
 		target = transform.position + offset;
+		currentOrbitingDistance = (transform.position - target).Length();
 	}
 
 	if (kbState.F) {
@@ -214,6 +216,15 @@ void ModuleCameraEditor::render() {
 
 		targetUpdatedViaImGui = false;
 	}
+
+    // --- Update view & projection matrices for this frame ---
+    view = Matrix::CreateLookAt(transform.position, target, transform.up);
+    projection = Matrix::CreatePerspectiveFieldOfView(
+        fov * (PI / 180.0f),
+        static_cast<float>(app->getWindowWidth()) / app->getWindowHeight(),
+        nearPlane,
+        farPlane
+    );
 }
 
 void ModuleCameraEditor::recalculateRight() {
