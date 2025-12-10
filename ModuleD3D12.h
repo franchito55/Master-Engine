@@ -37,6 +37,7 @@ public:
 	ComPtr<ID3D12Resource2> getDepthStencilBuffer() const { return depthStencilBuffer; }
 	const D3D12_CPU_DESCRIPTOR_HANDLE* getDSVCPUDescriptorHandle() const { return &dsvDescriptorHandle; }
 	ComPtr<ID3D12DescriptorHeap> getShaderVisibleDescriptorHeap() const { return shaderVisibleDescriptorHeap; }
+	void WaitForAllFences();
 
 private:
 	HWND hWnd;

@@ -20,42 +20,7 @@ bool ModuleAssignment1::init() {
 
 	buildRootSignature(device);
 
-	D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = {};
-	psoDesc.pRootSignature = rootSignature.Get();
-	auto dataVS = DX::ReadData(L"Exercise2VS.cso");
-	auto dataPS = DX::ReadData(L"Exercise2PS.cso");
-	psoDesc.VS = { dataVS.data(), dataVS.size() };
-	psoDesc.PS = { dataPS.data(), dataPS.size() };
-	D3D12_INPUT_ELEMENT_DESC layoutDescPos = {};
-	layoutDescPos.SemanticName = "MY_POS";
-	layoutDescPos.SemanticIndex = 0;
-	layoutDescPos.Format = DXGI_FORMAT_R32G32B32_FLOAT;
-	layoutDescPos.InputSlot = 0;
-	layoutDescPos.AlignedByteOffset = 0;
-	layoutDescPos.InputSlotClass = D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA;
-	layoutDescPos.InstanceDataStepRate = 0;
-	D3D12_INPUT_ELEMENT_DESC layoutDescTexCoord = {};
-	layoutDescTexCoord.SemanticName = "TEXCOORD";
-	layoutDescTexCoord.SemanticIndex = 0;
-	layoutDescTexCoord.Format = DXGI_FORMAT_R32G32_FLOAT;
-	layoutDescTexCoord.InputSlot = 0;
-	layoutDescTexCoord.AlignedByteOffset = D3D12_APPEND_ALIGNED_ELEMENT;
-	layoutDescTexCoord.InputSlotClass = D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA;
-	layoutDescTexCoord.InstanceDataStepRate = 0;
-	D3D12_INPUT_ELEMENT_DESC layout[] = { layoutDescPos, layoutDescTexCoord };
-	psoDesc.InputLayout = { layout, sizeof(layout) / sizeof(D3D12_INPUT_ELEMENT_DESC) };
-	psoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
-	psoDesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
-	psoDesc.NumRenderTargets = 1;
-	psoDesc.SampleDesc = { 1, 0 };
-	psoDesc.SampleMask = 0xffffffff;
-	psoDesc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
-	psoDesc.RasterizerState.FrontCounterClockwise = TRUE;
-	psoDesc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
-	psoDesc.DSVFormat = DXGI_FORMAT_D32_FLOAT;
-	psoDesc.DepthStencilState = CD3DX12_DEPTH_STENCIL_DESC(D3D12_DEFAULT);
-	HRESULT hr2 = device->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&pso));
-
+	buildPSO(device);
 
 	app->getModuleBuffer()->createDefaultBuffer(gpuVertexBuffer, sizeof(vertices));
 	app->getModuleBuffer()->createUploadBuffer(stagingVertexBuffer, sizeof(vertices));
@@ -148,7 +113,9 @@ void ModuleAssignment1::update() {}
 
 void ModuleAssignment1::preRender() {
 	if (textureFilteringChanged || textureAddressingChanged) {
+		app->getModuleD3D12()->WaitForAllFences();
 		buildRootSignature(app->getModuleD3D12()->getDevice());
+		buildPSO(app->getModuleD3D12()->getDevice());
 		textureFilteringChanged = false;
 		textureAddressingChanged = false;
 	}
@@ -204,7 +171,7 @@ void ModuleAssignment1::render() {
 
 	// Quad info window
 	ImGui::Begin("Geometry");
-	ImGui::DragFloat3("Triangle position", &transform.position.x, 0.1f, -100.0f, 100.0f);
+	ImGui::DragFloat3("Quad position", &transform.position.x, 0.1f, -100.0f, 100.0f);
 	ImGui::End();
 
 	ImGui::Begin("Debug Info");
@@ -275,4 +242,42 @@ void ModuleAssignment1::buildRootSignature(ComPtr<ID3D12Device> device) {
 	ComPtr<ID3DBlob> rootSigBlob;
 	D3D12SerializeRootSignature(&rootSigDesc, D3D_ROOT_SIGNATURE_VERSION_1, &rootSigBlob, nullptr);
 	device->CreateRootSignature(0, rootSigBlob->GetBufferPointer(), rootSigBlob->GetBufferSize(), IID_PPV_ARGS(&rootSignature));
+}
+
+void ModuleAssignment1::buildPSO(ComPtr<ID3D12Device> device) {
+	D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = {};
+	psoDesc.pRootSignature = rootSignature.Get();
+	auto dataVS = DX::ReadData(L"Exercise2VS.cso");
+	auto dataPS = DX::ReadData(L"Exercise2PS.cso");
+	psoDesc.VS = { dataVS.data(), dataVS.size() };
+	psoDesc.PS = { dataPS.data(), dataPS.size() };
+	D3D12_INPUT_ELEMENT_DESC layoutDescPos = {};
+	layoutDescPos.SemanticName = "MY_POS";
+	layoutDescPos.SemanticIndex = 0;
+	layoutDescPos.Format = DXGI_FORMAT_R32G32B32_FLOAT;
+	layoutDescPos.InputSlot = 0;
+	layoutDescPos.AlignedByteOffset = 0;
+	layoutDescPos.InputSlotClass = D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA;
+	layoutDescPos.InstanceDataStepRate = 0;
+	D3D12_INPUT_ELEMENT_DESC layoutDescTexCoord = {};
+	layoutDescTexCoord.SemanticName = "TEXCOORD";
+	layoutDescTexCoord.SemanticIndex = 0;
+	layoutDescTexCoord.Format = DXGI_FORMAT_R32G32_FLOAT;
+	layoutDescTexCoord.InputSlot = 0;
+	layoutDescTexCoord.AlignedByteOffset = D3D12_APPEND_ALIGNED_ELEMENT;
+	layoutDescTexCoord.InputSlotClass = D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA;
+	layoutDescTexCoord.InstanceDataStepRate = 0;
+	D3D12_INPUT_ELEMENT_DESC layout[] = { layoutDescPos, layoutDescTexCoord };
+	psoDesc.InputLayout = { layout, sizeof(layout) / sizeof(D3D12_INPUT_ELEMENT_DESC) };
+	psoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+	psoDesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
+	psoDesc.NumRenderTargets = 1;
+	psoDesc.SampleDesc = { 1, 0 };
+	psoDesc.SampleMask = 0xffffffff;
+	psoDesc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
+	psoDesc.RasterizerState.FrontCounterClockwise = TRUE;
+	psoDesc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
+	psoDesc.DSVFormat = DXGI_FORMAT_D32_FLOAT;
+	psoDesc.DepthStencilState = CD3DX12_DEPTH_STENCIL_DESC(D3D12_DEFAULT);
+	device->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&pso));
 }

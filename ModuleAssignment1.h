@@ -64,6 +64,7 @@ private:
 	bool textureAddressingChanged = false;
 
 	void buildRootSignature(ComPtr<ID3D12Device> device);
+	void buildPSO(ComPtr<ID3D12Device> device);
 	D3D12_FILTER imGuiFilteringToDX12(unsigned int imGuiIndex);
 	D3D12_TEXTURE_ADDRESS_MODE imGuiAddressingToDX12(unsigned int imGuiIndex);
 };

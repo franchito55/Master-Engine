@@ -50,9 +50,7 @@ void ModuleD3D12::preRender() {
 
 	if (resizePending) {
 		// When resizing, we need to wait for ALL buffers to be ready
-		for (unsigned int i = 0; i < FRAME_BUFFER_NUM; i++) {
-			WaitForFence(fenceValues[i]);
-		}
+		WaitForAllFences();
 		resizeBuffers();
 		resizePending = false;
 	}
@@ -350,4 +348,10 @@ void ModuleD3D12::enableDebugLayer() {
 	D3D12GetDebugInterface(IID_PPV_ARGS(&iDebug));
 	iDebug->EnableDebugLayer();
 #endif
+}
+
+void ModuleD3D12::WaitForAllFences() {
+	for (unsigned int i = 0; i < FRAME_BUFFER_NUM; i++) {
+		WaitForFence(fenceValues[i]);
+	}
 }
