@@ -12,6 +12,7 @@ class ModuleEditor;
 class ModuleBuffer;
 class ModuleCameraEditor;
 class ModuleInput;
+class ModuleAssignment1;
 
 class Application
 {
@@ -49,6 +50,9 @@ public:
     ModuleCameraEditor* getModuleCamera() const { return moduleCamera; }
     void setModuleCamera(ModuleCameraEditor* _moduleCamera) { moduleCamera = _moduleCamera; }
 
+    ModuleAssignment1* getModuleAssignment1() const { return moduleAssignment1; }
+    void setModuleAssignment1(ModuleAssignment1* _moduleAssignment1) { moduleAssignment1 = _moduleAssignment1; }
+
     unsigned int getWindowWidth() const { return windowWidth; }
     void setWindowWidth(const unsigned int _windowWidth) { windowWidth = _windowWidth; }
     unsigned int getWindowHeight() const { return windowHeight; }
@@ -72,6 +76,7 @@ private:
     ModuleBuffer* moduleBuffer = nullptr;
     ModuleInput* moduleInput = nullptr;
     ModuleCameraEditor* moduleCamera = nullptr;
+    ModuleAssignment1* moduleAssignment1 = nullptr;
 
     unsigned int windowWidth;
     unsigned int windowHeight;

@@ -14,9 +14,9 @@ struct Vertex {
 	Vector2 uv;
 };
 
-class ModuleExercise4 : public Module {
+class ModuleAssignment1 : public Module {
 public:
-	ModuleExercise4(HWND _hWnd);
+	ModuleAssignment1(HWND _hWnd);
 	bool init() override;
 	void update() override;
 	void preRender() override;
@@ -53,4 +53,7 @@ private:
 	Matrix mvp;
 
 	DebugDrawPass* debugDrawPass;
+
+	bool showAxisTriad = true;
+	bool showXZGrid = true;
 };

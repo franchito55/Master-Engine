@@ -188,7 +188,7 @@
     <ClInclude Include="ModuleD3D12.h" />
     <ClInclude Include="ModuleEditor.h" />
     <ClInclude Include="ModuleExercise3.h" />
-    <ClInclude Include="ModuleExercise4.h" />
+    <ClInclude Include="ModuleAssignment1.h" />
     <ClInclude Include="ModuleInput.h" />
     <ClInclude Include="Mouse.h" />
     <ClInclude Include="PlatformHelpers.h" />
@@ -284,7 +284,7 @@
     <ClCompile Include="ModuleD3D12.cpp" />
     <ClCompile Include="ModuleEditor.cpp" />
     <ClCompile Include="ModuleExercise3.cpp" />
-    <ClCompile Include="ModuleExercise4.cpp" />
+    <ClCompile Include="ModuleAssignment1.cpp" />
     <ClCompile Include="ModuleInput.cpp" />
     <ClCompile Include="Mouse.cpp" />
     <ClCompile Include="SimpleMath.cpp">

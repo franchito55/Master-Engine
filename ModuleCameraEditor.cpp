@@ -5,18 +5,19 @@
 #include "Keyboard.h"
 #include "Mouse.h"
 #include "DebugDrawPass.h"
+#include "ModuleAssignment1.h"
 
 #define PI 3.14159265358979323846
 #define MAX_ORBITING_DISTANCE 10.0f
 #define MIN_ORBITING_DISTANCE 0.3f
 
 ModuleCameraEditor::ModuleCameraEditor(HWND hWnd) {
-	transform.position = Vector3(1.0f, 1.5f, 5.0f);
+	transform.position = Vector3(1.0f, 1.5f, 3.0f);
 	transform.rotation = Quaternion::Identity;
 	transform.forward = target - transform.position;
 	transform.forward.Normalize();
 	transform.up = Vector3(0.0f, 1.0f, 0.0f);
-	transform.right = transform.up.Cross(transform.forward);
+	recalculateRight();
 }
 
 bool ModuleCameraEditor::init() {
@@ -30,6 +31,11 @@ void ModuleCameraEditor::update() {
 
 	Keyboard::State kbState = app->getModuleInput()->GetKeyboard()->GetState();
 
+	float realMoveSpeed = moveSpeed;
+	if (kbState.LeftShift) {
+		realMoveSpeed *= 2.0f;
+	}
+
 	Mouse::State mouseState = app->getModuleInput()->GetMouse()->GetState();
 	int mouseDeltaX = mouseState.x - previousMouseX;
 	int mouseDeltaY = mouseState.y - previousMouseY;
@@ -38,7 +44,7 @@ void ModuleCameraEditor::update() {
 	if (mouseScrollWheelDelta != 0) {
 		// We have to check if the next distance is <= the current one, since if the user scrolls really hard, it could jump to
 		// the other side of the triangle, bypassing the max zoom
-		Vector3 nextPos = transform.position + transform.forward * zoomSpeed * mouseScrollWheelDelta;
+		Vector3 nextPos = transform.position + transform.forward * zoomSpeed / 1000.0f * mouseScrollWheelDelta;
 		float nextDistance = (nextPos - target).Length();
 		if ((mouseScrollWheelDelta > 0 && !anySignsDiffer(transform.position - target, nextPos - target) && nextDistance >= MIN_ORBITING_DISTANCE) || (mouseScrollWheelDelta < 0 && nextDistance <= MAX_ORBITING_DISTANCE)) {
 			transform.position = nextPos;
@@ -46,12 +52,14 @@ void ModuleCameraEditor::update() {
 		}
 	}
 
+	Vector3 targetOffset = target - transform.position;
+
 	// Don't rotate if modifying the ImGui's drag sliders
-	if (!ImGui::IsAnyItemActive() && kbState.LeftAlt) {
+	if (!ImGui::IsAnyItemActive() && kbState.LeftAlt && mouseState.leftButton && !mouseState.rightButton) {
 
 		if (mouseDeltaY != 0) {
 			Vector3 offset = transform.position - target;
-			Quaternion rotationDelta = Quaternion::CreateFromAxisAngle(transform.right, -rotationSpeed * mouseDeltaY);
+			Quaternion rotationDelta = Quaternion::CreateFromAxisAngle(transform.right, -rotationSpeed / 1000.0f * mouseDeltaY);
 			transform.forward = Vector3::Transform(transform.forward, rotationDelta);
 			transform.up = Vector3::Transform(transform.up, rotationDelta);
 			Vector3 rotatedOffset = Vector3::Transform(offset, rotationDelta);
@@ -61,7 +69,7 @@ void ModuleCameraEditor::update() {
 
 		if (mouseDeltaX != 0) {
 			Vector3 offset = transform.position - target;
-			Quaternion rotationDelta = Quaternion::CreateFromAxisAngle(Vector3(0.0f, 1.0f, 0.0f), -rotationSpeed * mouseDeltaX);
+			Quaternion rotationDelta = Quaternion::CreateFromAxisAngle(Vector3(0.0f, 1.0f, 0.0f), -rotationSpeed / 1000.0f * mouseDeltaX);
 			transform.forward = Vector3::Transform(transform.forward, rotationDelta);
 			transform.up = Vector3::Transform(transform.up, rotationDelta);
 			Vector3 rotatedOffset = Vector3::Transform(offset, rotationDelta);
@@ -70,56 +78,65 @@ void ModuleCameraEditor::update() {
 		}
 	}
 
-	Vector3 prevTarget = target;
-	if (mouseState.rightButton) {
-		if (kbState.D) {
-			transform.position += transform.right * moveSpeed;
-			target += transform.right * moveSpeed;
-		}
-		else if (kbState.A) {
-			transform.position -= transform.right * moveSpeed;
-			target -= transform.right * moveSpeed;
-		}
-		if (kbState.Space) {
-			transform.position += transform.up * moveSpeed;
-			target += transform.up * moveSpeed;
-		}
-		else if (kbState.LeftControl) {
-			transform.position -= transform.up * moveSpeed;
-			target -= transform.up * moveSpeed;
-		}
-		if (kbState.W) {
-			transform.position += transform.forward * moveSpeed;
-			target += transform.forward * moveSpeed;
-		}
-		else if (kbState.S) {
-			transform.position -= transform.forward * moveSpeed;
-			target -= transform.forward * moveSpeed;
-		}
+	// Only EITHER rotate OR orbit, not both (too complicated and too tired to think of it)
+	if (mouseState.rightButton && !mouseState.leftButton) {
+		// Get the offset of the target relative to the camera
+		Vector3 offset = target - transform.position;
 
 		if (mouseDeltaY != 0) {
-			Quaternion rotationDelta = Quaternion::CreateFromAxisAngle(transform.right, -rotationSpeed * mouseDeltaY);
-			transform.forward = Vector3::Transform(transform.forward, rotationDelta);
-			transform.up = Vector3::Transform(transform.up, rotationDelta);
-			recalculateRight();
+			Quaternion rotY = Quaternion::CreateFromAxisAngle(transform.right, -rotationSpeed / 1000.0f * mouseDeltaY);
 
-			Vector3 targetOffset = prevTarget - transform.position;
-			Quaternion targetRotationDelta = Quaternion::CreateFromAxisAngle(transform.right, -rotationSpeed * mouseDeltaY);
-			Vector3 rotatedOffset = Vector3::Transform(targetOffset, rotationDelta);
-			target = transform.position + rotatedOffset;
+			// rotate orientation using rotY
+			transform.forward = Vector3::Transform(transform.forward, rotY);
+			transform.up = Vector3::Transform(transform.up, rotY);
+
+			// rotate offset first
+			offset = Vector3::Transform(offset, rotY);
 		}
 
 		if (mouseDeltaX != 0) {
-			Quaternion rotationDelta = Quaternion::CreateFromAxisAngle(Vector3(0.0f, 1.0f, 0.0f), -rotationSpeed * mouseDeltaX);
-			transform.forward = Vector3::Transform(transform.forward, rotationDelta);
-			transform.up = Vector3::Transform(transform.up, rotationDelta);
-			recalculateRight();
+			Quaternion rotX = Quaternion::CreateFromAxisAngle(Vector3(0.0f, 1.0f, 0.0f), -rotationSpeed / 1000.0f * mouseDeltaX);
 
-			Vector3 targetOffset = prevTarget - transform.position;
-			Quaternion targetRotationDelta = Quaternion::CreateFromAxisAngle(transform.right, -rotationSpeed * mouseDeltaX);
-			Vector3 rotatedOffset = Vector3::Transform(targetOffset, rotationDelta);
-			target = transform.position + rotatedOffset;
+			// rotate orientation using rotX
+			transform.forward = Vector3::Transform(transform.forward, rotX);
+			transform.up = Vector3::Transform(transform.up, rotX);
+
+			// rotate offset first
+			offset = Vector3::Transform(offset, rotX);
 		}
+
+		// Normalize everything just in case
+		transform.forward.Normalize();
+		transform.up.Normalize();
+		recalculateRight();
+		transform.right.Normalize();
+
+		// Compute the movement difference
+		Vector3 movementDelta = Vector3::Zero;
+		if (kbState.D)       movementDelta += transform.right * realMoveSpeed / 1000.0f;
+		else if (kbState.A)  movementDelta -= transform.right * realMoveSpeed / 1000.0f;
+
+		if (kbState.Space)   movementDelta += transform.up * realMoveSpeed / 1000.0f;
+		else if (kbState.LeftControl) movementDelta -= transform.up * realMoveSpeed / 1000.0f;
+
+		if (kbState.W)       movementDelta += transform.forward * realMoveSpeed / 1000.0f;
+		else if (kbState.S)  movementDelta -= transform.forward * realMoveSpeed / 1000.0f;
+
+		transform.position += movementDelta;
+
+		// ONLY THEN update the target's position
+		target = transform.position + offset;
+	}
+
+	if (kbState.F) {
+		Vector3 newTarget = app->getModuleAssignment1()->getTrianglePosition();
+		transform.forward = newTarget - transform.position;
+		transform.forward.Normalize();
+		transform.right = transform.forward.Cross(Vector3(0.0f, 1.0f, 0.0f));
+		transform.right.Normalize();
+		transform.up = transform.right.Cross(transform.forward);
+		transform.up.Normalize();
+		target = newTarget;
 	}
 
 	previousMouseX = mouseState.x;
@@ -151,9 +168,9 @@ void ModuleCameraEditor::render() {
 	}
 	if (ImGui::CollapsingHeader("Parameters")) {
 		ImGui::DragFloat("FOV", &fov, 1.0f, 5.0f, 120.0f);
-		ImGui::DragFloat("Move speed", &moveSpeed, 0.005f, 0.005f, 2.0f);
-		ImGui::DragFloat("Rotation speed", &rotationSpeed, 0.005f, 0.005f, 2.0f);
-		ImGui::DragFloat("Zoom speed", &zoomSpeed, 0.005f, 0.005f, 2.0f);
+		ImGui::DragFloat("Move speed", &moveSpeed, 1.0f, 5.0f, 100.0f);
+		ImGui::DragFloat("Rotation speed", &rotationSpeed, 0.1f, 1.0f, 20.0f);
+		ImGui::DragFloat("Zoom speed", &zoomSpeed, 0.1f, 1.0f, 20.0f);
 	}
 	ImGui::End();
 	
@@ -190,8 +207,6 @@ void ModuleCameraEditor::render() {
 
 		targetUpdatedViaImGui = false;
 	}
-
-	ImGui::ShowDemoWindow();
 
 	view = Matrix::CreateLookAt(transform.position, transform.position + transform.forward, transform.up);
 	projection = Matrix::CreatePerspectiveFieldOfView(fov * (PI / 180.0f), (float)app->getWindowWidth() / app->getWindowHeight(), nearPlane, farPlane);

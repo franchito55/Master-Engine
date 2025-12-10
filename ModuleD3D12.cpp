@@ -57,8 +57,8 @@ void ModuleD3D12::preRender() {
 		resizePending = false;
 	}
 	else {
-		// Wait for the GPU to finish presenting the last frame
-		WaitForFence(fenceValues[currentBackBufferIndex]);
+		frameIndex = (frameIndex + 1) % FRAME_BUFFER_NUM;
+		WaitForFence(fenceValues[frameIndex]);
 	}
 
 	//WaitForFence(fenceValues[currentBackBufferIndex]);
@@ -217,6 +217,7 @@ void ModuleD3D12::initCommandLists() {
 	// ============ Init render command lists ============ 
 	for (int i = 0; i < FRAME_BUFFER_NUM; i++) {
 		device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, renderCommandAllocators[i].Get(), nullptr, IID_PPV_ARGS(&renderCommandLists[i]));
+		// need the first one open in order to init the texture buffer
 		if (i > 0)
 			renderCommandLists[i]->Close();
 	}

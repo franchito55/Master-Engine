@@ -53,9 +53,9 @@ private:
 
 	float currentOrbitingDistance = 0.0f;
 	
-	float moveSpeed = 0.1f;
-	float rotationSpeed = 0.005f;
-	float zoomSpeed = 0.005f;
+	float moveSpeed = 30.0f;
+	float rotationSpeed = 5.0f;
+	float zoomSpeed = 5.0f;
 
 	unsigned int previousMouseX = 0;
 	unsigned int previousMouseY = 0;

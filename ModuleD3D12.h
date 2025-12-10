@@ -74,6 +74,8 @@ private:
 
 	float color[3] = { 0.2f, 0.2f, 0.2f };
 
+	unsigned int frameIndex = 0;
+
 	unsigned int fpsCount = 0;
 	std::chrono::system_clock::duration deltaTime;
 	std::chrono::system_clock::time_point lastFrameTime = std::chrono::time_point_cast<std::chrono::milliseconds>(std::chrono::system_clock::now());

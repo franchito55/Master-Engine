@@ -1,6 +1,6 @@
 #include "Globals.h"
 #define _USE_MATH_DEFINES
-#include "ModuleExercise4.h"
+#include "ModuleAssignment1.h"
 #include "Application.h"
 #include "ModuleD3D12.h"
 #include "ReadData.h"
@@ -11,9 +11,11 @@
 #include "ModuleCameraEditor.h"
 #include "TextureLoader.h"
 
-ModuleExercise4::ModuleExercise4(HWND _hWnd) : hWnd(_hWnd) {}
+ModuleAssignment1::ModuleAssignment1(HWND _hWnd) : hWnd(_hWnd) {}
 
-bool ModuleExercise4::init() {
+bool ModuleAssignment1::init() {
+	app->setModuleAssignment1(this);
+
 	ComPtr<ID3D12Device> device = app->getModuleD3D12()->getDevice();
 
 	CD3DX12_ROOT_SIGNATURE_DESC rootSigDesc = {};
@@ -162,11 +164,11 @@ bool ModuleExercise4::init() {
 	return true;
 }
 
-void ModuleExercise4::update() {}
+void ModuleAssignment1::update() {}
 
-void ModuleExercise4::preRender() {}
+void ModuleAssignment1::preRender() {}
 
-void ModuleExercise4::render() {
+void ModuleAssignment1::render() {
 
 	model = Matrix::CreateScale(transform.scale) * Matrix::CreateTranslation(transform.position);
 	mvp = (model * app->getModuleCamera()->GetViewMatrix() * app->getModuleCamera()->GetProjectionMatrix()).Transpose();
@@ -199,24 +201,29 @@ void ModuleExercise4::render() {
 
 	float cameraEye[3] = { camera->GetTransform().position.x, camera->GetTransform().position.x,camera->GetTransform().position.x };
 	// Triangle position window
-	ImGui::Begin("Triangle position");
+	ImGui::Begin("Geometry");
 	ImGui::DragFloat3("Triangle position", &transform.position.x, 0.1f, -100.0f, 100.0f);
 	ImGui::End();
 
-	// DebugDrawPass's record() sets the view and projection matrices AT THAT MOMENT, so you actually need to call it BEFORE
-	// calling things like sphere() to avoid a mismatch between frame's informations. If you call sphere() before record(),
-	// the sphere will be drawn using last frame's View and Projection, since they haven't been updated yet
-	debugDrawPass->record(commandList.Get(), app->getWindowWidth(), app->getWindowHeight(), app->getModuleCamera()->GetViewMatrix(), app->getModuleCamera()->GetProjectionMatrix());
-	dd::xzSquareGrid(-20.0f, 20.0f, 0.0f, 1.0f, dd::colors::LightGray);
-	dd::axisTriad(ddConvert(Matrix::Identity), 0.05f, 0.5f);
+	ImGui::Begin("Debug Info");
+	ImGui::Checkbox("Show XZ plane grid", &showXZGrid);
+	ImGui::Checkbox("Show world origin axis triad", &showAxisTriad);
+	ImGui::End();
+
+	if (showXZGrid)
+		dd::xzSquareGrid(-20.0f, 20.0f, 0.0f, 1.0f, dd::colors::LightGray);
+	if (showAxisTriad)
+		dd::axisTriad(ddConvert(Matrix::Identity), 0.05f, 0.5f);
+
 	float cameraTargetColor[3] = { 1.0f, 0.0f, 0.0f };
 	Vector3 cameraTarget = app->getModuleCamera()->getTarget();
 	dd::sphere(&cameraTarget.x, cameraTargetColor, 0.025f);
+	debugDrawPass->record(commandList.Get(), app->getWindowWidth(), app->getWindowHeight(), app->getModuleCamera()->GetViewMatrix(), app->getModuleCamera()->GetProjectionMatrix());
 }
 
-void ModuleExercise4::postRender() {}
+void ModuleAssignment1::postRender() {}
 
-void ModuleExercise4::createVertexBufferView(D3D12_VERTEX_BUFFER_VIEW* vBV) {
+void ModuleAssignment1::createVertexBufferView(D3D12_VERTEX_BUFFER_VIEW* vBV) {
 	vBV->BufferLocation = gpuVertexBuffer->GetGPUVirtualAddress();
 	vBV->SizeInBytes = sizeof(vertices);
 	vBV->StrideInBytes = FLOATS_PER_VERTEX * sizeof(float);
