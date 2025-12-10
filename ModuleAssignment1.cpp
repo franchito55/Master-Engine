@@ -60,8 +60,18 @@ bool ModuleAssignment1::init() {
 
 
 	DirectX::ScratchImage image;
-	TextureLoader::LoadFromDDSFile(L"../dog.dds", image);
+	TextureLoader::LoadFromDDSFile(L"../dog_nomipmaps.dds", image);
 	DirectX::TexMetadata metaData = image.GetMetadata();
+	// Generate MipMaps if texture doesn't have any
+	if (metaData.mipLevels == 1) {
+		ScratchImage newImage;
+		Image ifjhakajsf = *image.GetImage(0, 0, 0);
+		hr = DirectX::GenerateMipMaps(image.GetImages(), image.GetImageCount(), image.GetMetadata(), TEX_FILTER_DEFAULT, 5, newImage);
+		DirectX::TexMetadata newMetaData = newImage.GetMetadata();
+		image = std::move(newImage);
+		metaData = std::move(newMetaData);
+	}
+
 	D3D12_RESOURCE_DESC texBufferDesc = CD3DX12_RESOURCE_DESC::Tex2D(metaData.format, UINT64(metaData.width),
 		UINT(metaData.height), UINT16(metaData.arraySize),
 		UINT16(metaData.mipLevels));
@@ -81,7 +91,7 @@ bool ModuleAssignment1::init() {
 			subData.push_back(data);
 		}
 	}
-	UpdateSubresources(app->getModuleD3D12()->getCurrentBufferCommandList().Get(), gpuTextureBuffer.Get(), stagingTextureBuffer.Get(), 0, 0, UINT(image.GetImageCount()), subData.data());
+	UpdateSubresources(app->getModuleD3D12()->getCurrentBufferCommandList().Get(), gpuTextureBuffer.Get(), stagingTextureBuffer.Get(), 0, 0, UINT(metaData.mipLevels * metaData.arraySize), subData.data());
 	D3D12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition(gpuTextureBuffer.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, D3D12_RESOURCE_BARRIER_FLAG_NONE);
 	app->getModuleD3D12()->getCurrentBufferCommandList()->ResourceBarrier(1, &barrier);
 
