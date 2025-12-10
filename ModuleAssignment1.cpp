@@ -167,8 +167,6 @@ void ModuleAssignment1::render() {
 
 	ImGui::End();
 
-	ImGui::ShowDemoWindow();
-
 	// Quad info window
 	ImGui::Begin("Geometry");
 	ImGui::DragFloat3("Quad position", &transform.position.x, 0.1f, -100.0f, 100.0f);
