@@ -56,4 +56,14 @@ private:
 
 	bool showAxisTriad = true;
 	bool showXZGrid = true;
+
+	int currentTextureFiltering = 0;
+	int currentTextureAddressingMode = 0;
+
+	bool textureFilteringChanged = false;
+	bool textureAddressingChanged = false;
+
+	void buildRootSignature(ComPtr<ID3D12Device> device);
+	D3D12_FILTER imGuiFilteringToDX12(unsigned int imGuiIndex);
+	D3D12_TEXTURE_ADDRESS_MODE imGuiAddressingToDX12(unsigned int imGuiIndex);
 };

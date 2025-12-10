@@ -18,27 +18,7 @@ bool ModuleAssignment1::init() {
 
 	ComPtr<ID3D12Device> device = app->getModuleD3D12()->getDevice();
 
-	CD3DX12_ROOT_SIGNATURE_DESC rootSigDesc = {};
-
-	CD3DX12_ROOT_PARAMETER rootParameters[2];
-
-	rootParameters[0].InitAsConstants(sizeof(Matrix) / sizeof(UINT32), 0, 0, D3D12_SHADER_VISIBILITY_ALL);
-
-	CD3DX12_DESCRIPTOR_RANGE tableRange;
-	tableRange.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0);
-	rootParameters[1].InitAsDescriptorTable(1, &tableRange, D3D12_SHADER_VISIBILITY_PIXEL);
-
-	CD3DX12_STATIC_SAMPLER_DESC sampler;
-	sampler.Init(0, D3D12_FILTER_MIN_MAG_MIP_LINEAR, // Linear filtering
-		D3D12_TEXTURE_ADDRESS_MODE_WRAP, // Wrap mode
-		D3D12_TEXTURE_ADDRESS_MODE_WRAP,
-		D3D12_TEXTURE_ADDRESS_MODE_WRAP);
-
-	rootSigDesc.Init(2, rootParameters, 1, &sampler, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
-
-	ComPtr<ID3DBlob> rootSigBlob;
-	D3D12SerializeRootSignature(&rootSigDesc, D3D_ROOT_SIGNATURE_VERSION_1, &rootSigBlob, nullptr);
-	HRESULT hr1 = device->CreateRootSignature(0, rootSigBlob->GetBufferPointer(), rootSigBlob->GetBufferSize(), IID_PPV_ARGS(&rootSignature));
+	buildRootSignature(device);
 
 	D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = {};
 	psoDesc.pRootSignature = rootSignature.Get();
@@ -166,7 +146,13 @@ bool ModuleAssignment1::init() {
 
 void ModuleAssignment1::update() {}
 
-void ModuleAssignment1::preRender() {}
+void ModuleAssignment1::preRender() {
+	if (textureFilteringChanged || textureAddressingChanged) {
+		buildRootSignature(app->getModuleD3D12()->getDevice());
+		textureFilteringChanged = false;
+		textureAddressingChanged = false;
+	}
+}
 
 void ModuleAssignment1::render() {
 
@@ -197,10 +183,26 @@ void ModuleAssignment1::render() {
 
 	commandList->DrawInstanced(6, 1, 0, 0);
 
-	ModuleCameraEditor* camera = app->getModuleCamera();
 
-	float cameraEye[3] = { camera->GetTransform().position.x, camera->GetTransform().position.x,camera->GetTransform().position.x };
-	// Triangle position window
+	ImGui::Begin("Texture info");
+
+	int prevFilteringMode = currentTextureFiltering;
+	const char* filteringModes[] = { "LINEAR", "POINT" };
+	ImGui::Combo("textureFiltering", &currentTextureFiltering, filteringModes, IM_ARRAYSIZE(filteringModes));
+	if (currentTextureFiltering != prevFilteringMode)
+		textureFilteringChanged = true;
+
+	int prevAddressingMode = currentTextureAddressingMode;
+	const char* addressingModes[] = { "WRAP", "CLAMP" };
+	ImGui::Combo("textureAddressing", &currentTextureAddressingMode, addressingModes, IM_ARRAYSIZE(addressingModes));
+	if (currentTextureAddressingMode != prevAddressingMode)
+		textureAddressingChanged = true;
+
+	ImGui::End();
+
+	ImGui::ShowDemoWindow();
+
+	// Quad info window
 	ImGui::Begin("Geometry");
 	ImGui::DragFloat3("Triangle position", &transform.position.x, 0.1f, -100.0f, 100.0f);
 	ImGui::End();
@@ -209,6 +211,8 @@ void ModuleAssignment1::render() {
 	ImGui::Checkbox("Show XZ plane grid", &showXZGrid);
 	ImGui::Checkbox("Show world origin axis triad", &showAxisTriad);
 	ImGui::End();
+
+	dd::clear();
 
 	if (showXZGrid)
 		dd::xzSquareGrid(-20.0f, 20.0f, 0.0f, 1.0f, dd::colors::LightGray);
@@ -219,10 +223,8 @@ void ModuleAssignment1::render() {
 	Vector3 cameraTarget = app->getModuleCamera()->getTarget();
 	dd::sphere(&cameraTarget.x, cameraTargetColor, 0.025f);
 
-	ImGui::Begin("Texture info");
-	ImGui::End();
-
-	ImGui::ShowDemoWindow();
+	Matrix v = app->getModuleCamera()->GetViewMatrix();
+	Matrix p = app->getModuleCamera()->GetProjectionMatrix();
 
 	debugDrawPass->record(commandList.Get(), app->getWindowWidth(), app->getWindowHeight(), app->getModuleCamera()->GetViewMatrix(), app->getModuleCamera()->GetProjectionMatrix());
 }
@@ -233,4 +235,47 @@ void ModuleAssignment1::createVertexBufferView(D3D12_VERTEX_BUFFER_VIEW* vBV) {
 	vBV->BufferLocation = gpuVertexBuffer->GetGPUVirtualAddress();
 	vBV->SizeInBytes = sizeof(vertices);
 	vBV->StrideInBytes = FLOATS_PER_VERTEX * sizeof(float);
+}
+
+D3D12_FILTER ModuleAssignment1::imGuiFilteringToDX12(unsigned int imGuiIndex) {
+	switch (imGuiIndex) {
+	case 0:
+		return D3D12_FILTER_MIN_MAG_MIP_LINEAR;
+	case 1:
+		return D3D12_FILTER_MIN_MAG_MIP_POINT;
+	}
+}
+
+D3D12_TEXTURE_ADDRESS_MODE ModuleAssignment1::imGuiAddressingToDX12(unsigned int imGuiIndex) {
+	switch (imGuiIndex) {
+	case 0:
+		return D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+	case 1:
+		return D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
+	}
+}
+
+void ModuleAssignment1::buildRootSignature(ComPtr<ID3D12Device> device) {
+	CD3DX12_ROOT_SIGNATURE_DESC rootSigDesc = {};
+
+	CD3DX12_ROOT_PARAMETER rootParameters[2];
+
+	rootParameters[0].InitAsConstants(sizeof(Matrix) / sizeof(UINT32), 0, 0, D3D12_SHADER_VISIBILITY_ALL);
+
+	CD3DX12_DESCRIPTOR_RANGE tableRange;
+	tableRange.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0);
+	rootParameters[1].InitAsDescriptorTable(1, &tableRange, D3D12_SHADER_VISIBILITY_PIXEL);
+
+	CD3DX12_STATIC_SAMPLER_DESC sampler;
+	sampler.Init(0, 
+		imGuiFilteringToDX12(currentTextureFiltering), // Linear filtering
+		imGuiAddressingToDX12(currentTextureAddressingMode), // Addressing mode
+		imGuiAddressingToDX12(currentTextureAddressingMode),
+		imGuiAddressingToDX12(currentTextureAddressingMode));
+
+	rootSigDesc.Init(2, rootParameters, 1, &sampler, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
+
+	ComPtr<ID3DBlob> rootSigBlob;
+	D3D12SerializeRootSignature(&rootSigDesc, D3D_ROOT_SIGNATURE_VERSION_1, &rootSigBlob, nullptr);
+	device->CreateRootSignature(0, rootSigBlob->GetBufferPointer(), rootSigBlob->GetBufferSize(), IID_PPV_ARGS(&rootSignature));
 }

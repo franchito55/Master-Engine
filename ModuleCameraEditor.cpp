@@ -114,7 +114,8 @@ void ModuleCameraEditor::update() {
 
 		// Compute the movement difference
 		Vector3 movementDelta = Vector3::Zero;
-		if (kbState.D)       movementDelta += transform.right * realMoveSpeed / 1000.0f;
+		if (kbState.D)       
+			movementDelta += transform.right * realMoveSpeed / 1000.0f;
 		else if (kbState.A)  movementDelta -= transform.right * realMoveSpeed / 1000.0f;
 
 		if (kbState.Space)   movementDelta += transform.up * realMoveSpeed / 1000.0f;
@@ -138,11 +139,15 @@ void ModuleCameraEditor::update() {
 		transform.up = transform.right.Cross(transform.forward);
 		transform.up.Normalize();
 		target = newTarget;
+		currentOrbitingDistance = (transform.position - target).Length();
 	}
 
 	previousMouseX = mouseState.x;
 	previousMouseY = mouseState.y;
 	previousScrollWheelValue = mouseState.scrollWheelValue;
+
+	view = Matrix::CreateLookAt(transform.position, transform.position + transform.forward, transform.up);
+	projection = Matrix::CreatePerspectiveFieldOfView(fov * (PI / 180.0f), (float)app->getWindowWidth() / app->getWindowHeight(), nearPlane, farPlane);
 }
 
 void ModuleCameraEditor::render() {
@@ -205,12 +210,10 @@ void ModuleCameraEditor::render() {
 		transform.up = transform.right.Cross(transform.forward);
 		transform.up.Normalize();
 		target = imGuiTarget;
+		currentOrbitingDistance = (transform.position - target).Length();
 
 		targetUpdatedViaImGui = false;
 	}
-
-	view = Matrix::CreateLookAt(transform.position, transform.position + transform.forward, transform.up);
-	projection = Matrix::CreatePerspectiveFieldOfView(fov * (PI / 180.0f), (float)app->getWindowWidth() / app->getWindowHeight(), nearPlane, farPlane);
 }
 
 void ModuleCameraEditor::recalculateRight() {
