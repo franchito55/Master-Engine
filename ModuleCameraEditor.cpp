@@ -41,7 +41,8 @@ void ModuleCameraEditor::update() {
 	int mouseDeltaY = mouseState.y - previousMouseY;
 	int mouseScrollWheelDelta = mouseState.scrollWheelValue - previousScrollWheelValue;
 
-	if (mouseScrollWheelDelta != 0) {
+	// Don't scroll if hovering any ImGui window
+	if (!ImGui::IsWindowHovered(ImGuiHoveredFlags_AnyWindow) && mouseScrollWheelDelta != 0) {
 		// We have to check if the next distance is <= the current one, since if the user scrolls really hard, it could jump to
 		// the other side of the triangle, bypassing the max zoom
 		Vector3 nextPos = transform.position + transform.forward * zoomSpeed / 1000.0f * mouseScrollWheelDelta;

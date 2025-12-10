@@ -218,6 +218,12 @@ void ModuleAssignment1::render() {
 	float cameraTargetColor[3] = { 1.0f, 0.0f, 0.0f };
 	Vector3 cameraTarget = app->getModuleCamera()->getTarget();
 	dd::sphere(&cameraTarget.x, cameraTargetColor, 0.025f);
+
+	ImGui::Begin("Texture info");
+	ImGui::End();
+
+	ImGui::ShowDemoWindow();
+
 	debugDrawPass->record(commandList.Get(), app->getWindowWidth(), app->getWindowHeight(), app->getModuleCamera()->GetViewMatrix(), app->getModuleCamera()->GetProjectionMatrix());
 }
 
