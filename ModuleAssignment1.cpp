@@ -60,7 +60,12 @@ bool ModuleAssignment1::init() {
 
 
 	DirectX::ScratchImage image;
-	TextureLoader::LoadFromDDSFile(L"../dog_nomipmaps.dds", image);
+#ifdef _DEBUG
+	TextureLoader::LoadFromDDSFile(L"../dog.dds", image);
+#else
+	TextureLoader::LoadFromDDSFile(L"./resources/dog.dds", image);
+#endif
+
 	DirectX::TexMetadata metaData = image.GetMetadata();
 	// Generate MipMaps if texture doesn't have any
 	if (metaData.mipLevels == 1) {
@@ -91,6 +96,8 @@ bool ModuleAssignment1::init() {
 			subData.push_back(data);
 		}
 	}
+
+	// Need to UpdateSubresources using mipLevels * arraySize (total number of Subresources)
 	UpdateSubresources(app->getModuleD3D12()->getCurrentBufferCommandList().Get(), gpuTextureBuffer.Get(), stagingTextureBuffer.Get(), 0, 0, UINT(metaData.mipLevels * metaData.arraySize), subData.data());
 	D3D12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition(gpuTextureBuffer.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, D3D12_RESOURCE_BARRIER_FLAG_NONE);
 	app->getModuleD3D12()->getCurrentBufferCommandList()->ResourceBarrier(1, &barrier);
@@ -165,14 +172,14 @@ void ModuleAssignment1::render() {
 
 	int prevFilteringMode = currentTextureFiltering;
 	const char* filteringModes[] = { "LINEAR", "POINT" };
-	ImGui::Combo("textureFiltering", &currentTextureFiltering, filteringModes, IM_ARRAYSIZE(filteringModes));
-	if (currentTextureFiltering != prevFilteringMode)
+	ImGui::Combo("Filtering mode", &currentTextureFiltering, filteringModes, IM_ARRAYSIZE(filteringModes));
+	if (currentTextureFiltering != prevFilteringMode) // Set this flag to change texture filtering mode next frame
 		textureFilteringChanged = true;
 
 	int prevAddressingMode = currentTextureAddressingMode;
 	const char* addressingModes[] = { "WRAP", "CLAMP" };
-	ImGui::Combo("textureAddressing", &currentTextureAddressingMode, addressingModes, IM_ARRAYSIZE(addressingModes));
-	if (currentTextureAddressingMode != prevAddressingMode)
+	ImGui::Combo("Addressing mode", &currentTextureAddressingMode, addressingModes, IM_ARRAYSIZE(addressingModes));
+	if (currentTextureAddressingMode != prevAddressingMode) // Set this flag to change texture addressing mode next frame
 		textureAddressingChanged = true;
 
 	ImGui::End();
@@ -185,18 +192,25 @@ void ModuleAssignment1::render() {
 	ImGui::Begin("Debug Info");
 	ImGui::Checkbox("Show XZ plane grid", &showXZGrid);
 	ImGui::Checkbox("Show world origin axis triad", &showAxisTriad);
+	ImGui::Checkbox("Show camera target position", &showCameraTarget);
 	ImGui::End();
 
 	dd::clear();
 
 	if (showXZGrid)
 		dd::xzSquareGrid(-20.0f, 20.0f, 0.0f, 1.0f, dd::colors::LightGray);
-	if (showAxisTriad)
-		dd::axisTriad(ddConvert(Matrix::Identity), 0.05f, 0.5f);
-
-	float cameraTargetColor[3] = { 1.0f, 0.0f, 0.0f };
-	Vector3 cameraTarget = app->getModuleCamera()->getTarget();
-	dd::sphere(&cameraTarget.x, cameraTargetColor, 0.025f);
+	if (showAxisTriad) {
+		// To avoid z-fighting between axis and grid. Axis lines always drawn on top
+		Vector3 nudge = app->getModuleCamera()->GetTransform().position;
+		nudge.Normalize();
+		Matrix axisPos = Matrix::CreateTranslation(nudge * 0.001f);
+		dd::axisTriad(ddConvert(axisPos), 0.05f, 0.5f);
+	}
+	if (showCameraTarget) {
+		float cameraTargetColor[3] = { 1.0f, 0.0f, 0.0f };
+		Vector3 cameraTarget = app->getModuleCamera()->getTarget();
+		dd::sphere(&cameraTarget.x, cameraTargetColor, 0.025f);
+	}
 
 	debugDrawPass->record(commandList.Get(), app->getWindowWidth(), app->getWindowHeight(), app->getModuleCamera()->GetViewMatrix(), app->getModuleCamera()->GetProjectionMatrix());
 }

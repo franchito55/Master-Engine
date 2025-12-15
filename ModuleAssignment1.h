@@ -56,6 +56,7 @@ private:
 
 	bool showAxisTriad = true;
 	bool showXZGrid = true;
+	bool showCameraTarget = true;
 
 	int currentTextureFiltering = 0;
 	int currentTextureAddressingMode = 0;

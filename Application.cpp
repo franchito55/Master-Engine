@@ -2,9 +2,7 @@
 #include "Application.h"
 #include "ModuleInput.h"
 #include "ModuleD3D12.h"
-#include "ModuleEditor.h"
 #include "ModuleBuffer.h"
-#include "ModuleExercise3.h"
 #include "ModuleCameraEditor.h"
 #include "ModuleAssignment1.h"
 

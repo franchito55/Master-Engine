@@ -11,12 +11,6 @@ bool ModuleBuffer::init() {
 	return true;
 }
 
-void ModuleBuffer::preRender() {
-}
-
-void ModuleBuffer::render() {
-}
-
 void ModuleBuffer::createUploadBuffer(ComPtr<ID3D12Resource>& resourceHandle, const unsigned int bufferSize) {
 	// Staging buffer -> heap type = UPLOAD (this buffer is used to upload data to the GPU)
 	CD3DX12_HEAP_PROPERTIES sbHeapProps(D3D12_HEAP_TYPE_UPLOAD);
