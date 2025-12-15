@@ -9,7 +9,7 @@
 #include <algorithm>
 
 #define PI 3.14159265358979323846
-#define MAX_ORBITING_DISTANCE 10.0f
+#define MAX_ORBITING_DISTANCE 30.0f
 #define MIN_ORBITING_DISTANCE 0.3f
 
 ModuleCameraEditor::ModuleCameraEditor(HWND hWnd) {
@@ -158,12 +158,7 @@ void ModuleCameraEditor::render() {
 	Vector3 imGuiForward = transform.forward;
 	Vector3 imGuiUp = transform.up;
 	Vector3 imGuiTarget = target;
-
-	// Store current vectors (need to check if modified)
-	Vector3 previousPos = imGuiPos;
-	Vector3 previousForward = imGuiForward;
-	Vector3 previousUp = imGuiUp;
-	Vector3 previousTarget = imGuiTarget;
+	float imGuiOrbitingDist = currentOrbitingDistance;
 
 	ImGui::Begin("Camera");
 	if (ImGui::CollapsingHeader("Vectors")) {
@@ -171,8 +166,7 @@ void ModuleCameraEditor::render() {
 		ImGui::DragFloat3("Forward", &imGuiForward.x, 0.1f, -20.0f, 20.0f);
 		ImGui::DragFloat3("Up", &imGuiUp.x, 0.1f, -20.0f, 20.0f);
 		ImGui::DragFloat3("Target", &imGuiTarget.x, 0.1f, -20.0f, 20.0f);
-		float dist = (target - transform.position).Length();
-		ImGui::DragFloat("Distance", &dist);
+		ImGui::DragFloat("Distance", &imGuiOrbitingDist, 0.1f, MIN_ORBITING_DISTANCE, MAX_ORBITING_DISTANCE);
 	}
 	if (ImGui::CollapsingHeader("Parameters")) {
 		ImGui::DragFloat("FOV", &fov, 1.0f, 5.0f, 120.0f);
@@ -182,14 +176,16 @@ void ModuleCameraEditor::render() {
 	}
 	ImGui::End();
 	
-	if (previousPos != imGuiPos)
+	if (imGuiPos != transform.position)
 		posUpdatedViaImGui = true;
-	if (previousForward != imGuiForward)
+	if (imGuiForward != transform.forward)
 		forwardUpdatedViaImGui = true;
-	if (previousUp != imGuiUp)
+	if (imGuiUp != transform.up)
 		upUpdatedViaImGui = true;
-	if (previousTarget != imGuiTarget)
+	if (imGuiTarget != target)
 		targetUpdatedViaImGui = true;
+	if (imGuiOrbitingDist != currentOrbitingDistance)
+		orbitingDistanceUpdatedViaImGui = true;
 
 	// Recalculate target in case the user has changed the camera's values via ImGui
 	if (posUpdatedViaImGui || forwardUpdatedViaImGui || upUpdatedViaImGui) {
@@ -215,6 +211,22 @@ void ModuleCameraEditor::render() {
 		currentOrbitingDistance = (transform.position - target).Length();
 
 		targetUpdatedViaImGui = false;
+	}
+	else if (orbitingDistanceUpdatedViaImGui) {
+		transform.forward = imGuiTarget - imGuiPos;
+		transform.forward.Normalize();
+		transform.right = transform.forward.Cross(Vector3(0.0f, 1.0f, 0.0f));
+		transform.right.Normalize();
+		transform.up = transform.right.Cross(transform.forward);
+		transform.up.Normalize();
+		target = imGuiTarget;
+		currentOrbitingDistance = imGuiOrbitingDist;
+		Vector3 nudge = transform.position - target;
+		nudge.Normalize();
+		transform.position = target + nudge * currentOrbitingDistance;
+
+
+		orbitingDistanceUpdatedViaImGui = false;
 	}
 
     // --- Update view & projection matrices for this frame ---

@@ -27,10 +27,10 @@ public:
 	void recalculateRight();
 	void resetState();
 
-	void setPosUpdatedViaImGui(bool updated) { posUpdatedViaImGui = updated; }
-	void setForwardUpdatedViaImGui(bool updated) { forwardUpdatedViaImGui = updated; }
-	void setUpUpdatedViaImGui(bool updated) { upUpdatedViaImGui = updated; }
-	void setTargetUpdatedViaImGui(bool updated) { targetUpdatedViaImGui = updated; }
+	void setPosUpdatedViaImGui(const bool updated) { posUpdatedViaImGui = updated; }
+	void setForwardUpdatedViaImGui(const bool updated) { forwardUpdatedViaImGui = updated; }
+	void setUpUpdatedViaImGui(const bool updated) { upUpdatedViaImGui = updated; }
+	void setTargetUpdatedViaImGui(const bool updated) { targetUpdatedViaImGui = updated; }
 
 private:
 	Transform transform = {};
@@ -65,6 +65,7 @@ private:
 	bool forwardUpdatedViaImGui = false;
 	bool upUpdatedViaImGui = false;
 	bool targetUpdatedViaImGui = false;
+	bool orbitingDistanceUpdatedViaImGui = false;
 
 	bool anySignsDiffer(Vector3 target, Vector3 position);
 };
