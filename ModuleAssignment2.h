@@ -1,13 +1,19 @@
 #pragma once
 #include "Globals.h"
 #include "Module.h"
-#include "ModuleCameraEditor.h"
 #include "DebugDrawPass.h"
+#define TINYGLTF_NO_STB_IMAGE_WRITE
+#define TINYGLTF_NO_STB_IMAGE
+#define TINYGLTF_NO_EXTERNAL_IMAGE
+#define TINYGLTF_IMPLEMENTATION
+#include "3rdParty/tinygltf/tiny_gltf.h"
+#include "structs/Transform.h"
 
 #define FLOATS_PER_VERTEX 5
 
 class Application;
 extern Application* app;
+struct Transform;
 
 struct Vertex {
 	Vector3 position;
@@ -38,14 +44,14 @@ private:
 
 	D3D12_GPU_DESCRIPTOR_HANDLE textureSrvGpuHandle, textureSamplerGpuHandle;
 
-	Vertex vertices[6] = {
+	/*Vertex vertices[6] = {
 		{ Vector3(-1.0f, 1.0f, 0.0f), Vector2(-0.25f, -0.25f) },
 		{ Vector3(-1.0f, -1.0f, 0.0f), Vector2(-0.25f, 1.25f) },
 		{ Vector3(1.0f, -1.0f, 0.0f), Vector2(1.25f, 1.25f) },
 		{ Vector3(-1.0f, 1.0f, 0.0f), Vector2(-0.25f, -0.25f)},
 		{ Vector3(1.0f, -1.0f, 0.0f), Vector2(1.25f, 1.25f) },
 		{ Vector3(1.0f, 1.0f, 0.0f), Vector2(1.25f, -0.25f) }
-	};
+	};*/
 
 	Transform transform = {};
 

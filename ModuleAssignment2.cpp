@@ -22,7 +22,14 @@ bool ModuleAssignment2::init() {
 
 	buildPSO(device);
 
-	app->getModuleBuffer()->createDefaultBuffer(gpuVertexBuffer, sizeof(vertices));
+	// =================== Load model using GLTF ===================
+	tinygltf::TinyGLTF tinyGLTF;
+	tinygltf::Model model;
+	std::string error, warning;
+	tinyGLTF.LoadASCIIFromFile(&model, &error, &warning, "../Duck.gltf");
+
+
+	/*app->getModuleBuffer()->createDefaultBuffer(gpuVertexBuffer, sizeof(vertices));
 	app->getModuleBuffer()->createUploadBuffer(stagingVertexBuffer, sizeof(vertices));
 
 	createVertexBufferView(&vBV);
@@ -121,7 +128,7 @@ bool ModuleAssignment2::init() {
 	ID3D12CommandList* lists[] = { copyCommandList.Get() };
 	app->getModuleD3D12()->getCopyCommandQueue()->ExecuteCommandLists(1, lists);
 	app->getModuleD3D12()->getCopyCommandQueue()->Signal(app->getModuleD3D12()->getFence().Get(), 500);
-	app->getModuleD3D12()->WaitForFence(500);
+	app->getModuleD3D12()->WaitForFence(500);*/
 
 	return true;
 }
@@ -219,7 +226,7 @@ void ModuleAssignment2::postRender() {}
 
 void ModuleAssignment2::createVertexBufferView(D3D12_VERTEX_BUFFER_VIEW* vBV) {
 	vBV->BufferLocation = gpuVertexBuffer->GetGPUVirtualAddress();
-	vBV->SizeInBytes = sizeof(vertices);
+	//vBV->SizeInBytes = sizeof(vertices);
 	vBV->StrideInBytes = FLOATS_PER_VERTEX * sizeof(float);
 }
 
