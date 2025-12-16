@@ -186,7 +186,7 @@
     <ClInclude Include="ModuleBuffer.h" />
     <ClInclude Include="ModuleCameraEditor.h" />
     <ClInclude Include="ModuleD3D12.h" />
-    <ClInclude Include="ModuleAssignment1.h" />
+    <ClInclude Include="ModuleAssignment2.h" />
     <ClInclude Include="ModuleInput.h" />
     <ClInclude Include="Mouse.h" />
     <ClInclude Include="PlatformHelpers.h" />
@@ -280,7 +280,7 @@
     <ClCompile Include="ModuleBuffer.cpp" />
     <ClCompile Include="ModuleCameraEditor.cpp" />
     <ClCompile Include="ModuleD3D12.cpp" />
-    <ClCompile Include="ModuleAssignment1.cpp" />
+    <ClCompile Include="ModuleAssignment2.cpp" />
     <ClCompile Include="ModuleInput.cpp" />
     <ClCompile Include="Mouse.cpp" />
     <ClCompile Include="SimpleMath.cpp">

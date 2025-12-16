@@ -4,7 +4,7 @@
 #include "ModuleD3D12.h"
 #include "ModuleBuffer.h"
 #include "ModuleCameraEditor.h"
-#include "ModuleAssignment1.h"
+#include "ModuleAssignment2.h"
 
 Application::Application(int argc, wchar_t** argv, void* hWnd)
 {
@@ -16,7 +16,7 @@ Application::Application(int argc, wchar_t** argv, void* hWnd)
     modules.push_back(new ModuleInput((HWND)hWnd));
     modules.push_back(new ModuleD3D12((HWND)hWnd));
     modules.push_back(new ModuleBuffer((HWND)hWnd));
-    modules.push_back(new ModuleAssignment1((HWND)hWnd));
+    modules.push_back(new ModuleAssignment2((HWND)hWnd));
 }
 
 Application::~Application()

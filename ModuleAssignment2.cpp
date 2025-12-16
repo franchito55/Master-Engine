@@ -1,6 +1,6 @@
 #include "Globals.h"
 #define _USE_MATH_DEFINES
-#include "ModuleAssignment1.h"
+#include "ModuleAssignment2.h"
 #include "Application.h"
 #include "ModuleD3D12.h"
 #include "ReadData.h"
@@ -11,10 +11,10 @@
 #include "ModuleCameraEditor.h"
 #include "TextureLoader.h"
 
-ModuleAssignment1::ModuleAssignment1(HWND _hWnd) : hWnd(_hWnd) {}
+ModuleAssignment2::ModuleAssignment2(HWND _hWnd) : hWnd(_hWnd) {}
 
-bool ModuleAssignment1::init() {
-	app->setModuleAssignment1(this);
+bool ModuleAssignment2::init() {
+	app->setModuleAssignment2(this);
 
 	ComPtr<ID3D12Device> device = app->getModuleD3D12()->getDevice();
 
@@ -126,9 +126,9 @@ bool ModuleAssignment1::init() {
 	return true;
 }
 
-void ModuleAssignment1::update() {}
+void ModuleAssignment2::update() {}
 
-void ModuleAssignment1::preRender() {
+void ModuleAssignment2::preRender() {
 	if (textureFilteringChanged || textureAddressingChanged) {
 		app->getModuleD3D12()->WaitForAllFences();
 		buildRootSignature(app->getModuleD3D12()->getDevice());
@@ -138,7 +138,7 @@ void ModuleAssignment1::preRender() {
 	}
 }
 
-void ModuleAssignment1::render() {
+void ModuleAssignment2::render() {
 
 	model = Matrix::CreateScale(transform.scale) * Matrix::CreateTranslation(transform.position);
 	mvp = (model * app->getModuleCamera()->GetViewMatrix() * app->getModuleCamera()->GetProjectionMatrix()).Transpose();
@@ -215,15 +215,15 @@ void ModuleAssignment1::render() {
 	debugDrawPass->record(commandList.Get(), app->getWindowWidth(), app->getWindowHeight(), app->getModuleCamera()->GetViewMatrix(), app->getModuleCamera()->GetProjectionMatrix());
 }
 
-void ModuleAssignment1::postRender() {}
+void ModuleAssignment2::postRender() {}
 
-void ModuleAssignment1::createVertexBufferView(D3D12_VERTEX_BUFFER_VIEW* vBV) {
+void ModuleAssignment2::createVertexBufferView(D3D12_VERTEX_BUFFER_VIEW* vBV) {
 	vBV->BufferLocation = gpuVertexBuffer->GetGPUVirtualAddress();
 	vBV->SizeInBytes = sizeof(vertices);
 	vBV->StrideInBytes = FLOATS_PER_VERTEX * sizeof(float);
 }
 
-D3D12_FILTER ModuleAssignment1::imGuiFilteringToDX12(unsigned int imGuiIndex) {
+D3D12_FILTER ModuleAssignment2::imGuiFilteringToDX12(unsigned int imGuiIndex) {
 	switch (imGuiIndex) {
 	case 0:
 		return D3D12_FILTER_MIN_MAG_MIP_LINEAR;
@@ -232,7 +232,7 @@ D3D12_FILTER ModuleAssignment1::imGuiFilteringToDX12(unsigned int imGuiIndex) {
 	}
 }
 
-D3D12_TEXTURE_ADDRESS_MODE ModuleAssignment1::imGuiAddressingToDX12(unsigned int imGuiIndex) {
+D3D12_TEXTURE_ADDRESS_MODE ModuleAssignment2::imGuiAddressingToDX12(unsigned int imGuiIndex) {
 	switch (imGuiIndex) {
 	case 0:
 		return D3D12_TEXTURE_ADDRESS_MODE_WRAP;
@@ -241,7 +241,7 @@ D3D12_TEXTURE_ADDRESS_MODE ModuleAssignment1::imGuiAddressingToDX12(unsigned int
 	}
 }
 
-void ModuleAssignment1::buildRootSignature(ComPtr<ID3D12Device> device) {
+void ModuleAssignment2::buildRootSignature(ComPtr<ID3D12Device> device) {
 	CD3DX12_ROOT_SIGNATURE_DESC rootSigDesc = {};
 
 	CD3DX12_ROOT_PARAMETER rootParameters[2];
@@ -266,7 +266,7 @@ void ModuleAssignment1::buildRootSignature(ComPtr<ID3D12Device> device) {
 	device->CreateRootSignature(0, rootSigBlob->GetBufferPointer(), rootSigBlob->GetBufferSize(), IID_PPV_ARGS(&rootSignature));
 }
 
-void ModuleAssignment1::buildPSO(ComPtr<ID3D12Device> device) {
+void ModuleAssignment2::buildPSO(ComPtr<ID3D12Device> device) {
 	D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = {};
 	psoDesc.pRootSignature = rootSignature.Get();
 	auto dataVS = DX::ReadData(L"Exercise2VS.cso");

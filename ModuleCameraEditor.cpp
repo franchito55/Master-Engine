@@ -5,7 +5,7 @@
 #include "Keyboard.h"
 #include "Mouse.h"
 #include "DebugDrawPass.h"
-#include "ModuleAssignment1.h"
+#include "ModuleAssignment2.h"
 #include <algorithm>
 
 #define PI 3.14159265358979323846
@@ -133,7 +133,7 @@ void ModuleCameraEditor::update() {
 	}
 
 	if (kbState.F) {
-		Vector3 newTarget = app->getModuleAssignment1()->getTrianglePosition();
+		Vector3 newTarget = app->getModuleAssignment2()->getTrianglePosition();
 		transform.forward = newTarget - transform.position;
 		transform.forward.Normalize();
 		transform.right = transform.forward.Cross(Vector3(0.0f, 1.0f, 0.0f));

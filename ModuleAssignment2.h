@@ -14,9 +14,9 @@ struct Vertex {
 	Vector2 uv;
 };
 
-class ModuleAssignment1 : public Module {
+class ModuleAssignment2 : public Module {
 public:
-	ModuleAssignment1(HWND _hWnd);
+	ModuleAssignment2(HWND _hWnd);
 	bool init() override;
 	void update() override;
 	void preRender() override;
