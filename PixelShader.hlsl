@@ -5,6 +5,7 @@ SamplerState colourSampler : register(s0);
 struct VertexOutput {
     float2 texCoords : TEXCOORD;
     float4 position : SV_POSITION;
+    float3 normal : NORMAL;
 };
 
 float4 main(VertexOutput vertexOutput) : SV_TARGET

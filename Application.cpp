@@ -36,7 +36,7 @@ bool Application::init()
 	for(auto it = modules.begin(); it != modules.end() && ret; ++it)
 		ret = (*it)->init();
 
-    //((ModuleEditor*)modules.at(2))->postInit((ModuleD3D12*)modules.at(1));
+    getModuleAssignment2()->postInit();
 
     lastMilis = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 
