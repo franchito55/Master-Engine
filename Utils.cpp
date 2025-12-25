@@ -11,6 +11,7 @@
 #include "GameObject.h"
 #include "ModuleBuffer.h"
 #include "ModuleD3D12.h"
+#include "Material.h"
 
 #define ASSETS_RELATIVE_PATH "../"
 
@@ -83,6 +84,13 @@ bool Utils::loadMeshIntoGameObjectGLTF(const tinygltf::Model& model, unsigned in
 		Utils::loadGLTFAccessorData(indexData, sizeof(unsigned short), sizeof(unsigned short), numIndices, model, primitive.indices);
 		gameObject->getMesh()->setIndices(indices);
 		gameObject->getMesh()->setNumIndices(numIndices);
+
+		// Load material data
+		Material* mat = new Material();
+		float gltfMetallicFactor = model.materials.at(model.meshes.at(meshIndex).primitives.at(primitiveIndex).material).pbrMetallicRoughness.metallicFactor;
+		std::vector<double> gltfEmissiveFactor = model.materials.at(model.meshes.at(meshIndex).primitives.at(primitiveIndex).material).emissiveFactor;
+		mat->setMetallicFactor(gltfMetallicFactor);
+		mat->setEmissiveFactor(Vector3{ (float)gltfEmissiveFactor.at(0), (float)gltfEmissiveFactor.at(1), (float)gltfEmissiveFactor.at(2) });
 
 		return true;
 	}
