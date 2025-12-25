@@ -89,6 +89,7 @@ bool Utils::loadMeshIntoGameObjectGLTF(const tinygltf::Model& model, unsigned in
 		Material* mat = new Material();
 		float gltfMetallicFactor = model.materials.at(model.meshes.at(meshIndex).primitives.at(primitiveIndex).material).pbrMetallicRoughness.metallicFactor;
 		std::vector<double> gltfEmissiveFactor = model.materials.at(model.meshes.at(meshIndex).primitives.at(primitiveIndex).material).emissiveFactor;
+		mat->setName(model.materials.at(model.meshes.at(meshIndex).primitives.at(primitiveIndex).material).name);
 		mat->setMetallicFactor(gltfMetallicFactor);
 		mat->setEmissiveFactor(Vector3{ (float)gltfEmissiveFactor.at(0), (float)gltfEmissiveFactor.at(1), (float)gltfEmissiveFactor.at(2) });
 

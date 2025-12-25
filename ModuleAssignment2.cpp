@@ -36,7 +36,7 @@ bool ModuleAssignment2::init() {
 		Mesh mesh = *gameObject->getMesh();
 		char buffer[500];
 		Vertex currentVertex = mesh.getVertices()[i];
-		snprintf(buffer, sizeof(buffer), "Vertex %d:\n  Position: (%f, %f, %f)\n  Normal: (%f, %f, %f)\n TexCoord: (%f, %f)\n", i, 
+		snprintf(buffer, sizeof(buffer), "Vertex %d:\n - Position: (%f, %f, %f)\n - Normal: (%f, %f, %f)\n - TexCoord: (%f, %f)\n", i, 
 			currentVertex.position.x, currentVertex.position.y, currentVertex.position.z,
 			currentVertex.normal.x, currentVertex.normal.y, currentVertex.normal.z,
 			currentVertex.texCoord.x, currentVertex.texCoord.y);
