@@ -7,6 +7,12 @@
 #define TINYGLTF_IMPLEMENTATION
 #include "Utils.h"
 #include "Mesh.h"
+#include "TextureLoader.h"
+#include "GameObject.h"
+#include "ModuleBuffer.h"
+#include "ModuleD3D12.h"
+
+#define ASSETS_RELATIVE_PATH "../"
 
 extern Application* app;
 
@@ -56,7 +62,8 @@ bool Utils::loadGLTFAccessorData(uint8_t* data, size_t elemSize, size_t stride, 
 	return true;
 }
 
-bool Utils::loadIntoMesh(const tinygltf::Model& model, Mesh& mesh, const tinygltf::Primitive& primitive) {
+bool Utils::loadMeshIntoGameObjectGLTF(const tinygltf::Model& model, unsigned int meshIndex, unsigned int primitiveIndex, GameObject* gameObject) {
+	const tinygltf::Primitive primitive = model.meshes.at(meshIndex).primitives.at(primitiveIndex);
 	const auto& itPos = primitive.attributes.find("POSITION");
 	if (itPos != primitive.attributes.end()) {
 		// Load vertices into Mesh
@@ -66,18 +73,78 @@ bool Utils::loadIntoMesh(const tinygltf::Model& model, Mesh& mesh, const tinyglt
 		Utils::loadGLTFAccessorData(vertexData + offsetof(Vertex, position), sizeof(Vector3), sizeof(Vertex), numVertices, model, itPos->second);
 		Utils::loadGLTFAccessorData(vertexData + offsetof(Vertex, normal), sizeof(Vector3), sizeof(Vertex), numVertices, model, primitive.attributes, "NORMAL");
 		Utils::loadGLTFAccessorData(vertexData + offsetof(Vertex, texCoord), sizeof(Vector2), sizeof(Vertex), numVertices, model, primitive.attributes, "TEXCOORD_0");
-		mesh.setVertices(vertices);
-		mesh.setNumVertices(numVertices);
+		gameObject->getMesh()->setVertices(vertices);
+		gameObject->getMesh()->setNumVertices(numVertices);
 
 		// Load indices into Mesh
 		uint32_t numIndices = model.accessors.at(primitive.indices).count;
 		unsigned short* indices = new unsigned short[numIndices];
 		uint8_t* indexData = (uint8_t*)indices; // Casts Vertex Buffer to Bytes (uint8_t*) buffer
 		Utils::loadGLTFAccessorData(indexData, sizeof(unsigned short), sizeof(unsigned short), numIndices, model, primitive.indices);
-		mesh.setIndices(indices);
-		mesh.setNumIndices(numIndices);
+		gameObject->getMesh()->setIndices(indices);
+		gameObject->getMesh()->setNumIndices(numIndices);
 
 		return true;
 	}
 	return false;
+}
+
+bool Utils::loadTextureIntoGameObjectGLTF(const tinygltf::Model& model, unsigned int meshIndex, unsigned int primitiveIndex, ComPtr<ID3D12Resource>& stagingTextureBuffer, ComPtr<ID3D12Resource>& gpuTextureBuffer) {
+	unsigned int materialIndex = model.meshes.at(meshIndex).primitives.at(primitiveIndex).material;
+	unsigned int textureIndex = model.materials.at(materialIndex).pbrMetallicRoughness.baseColorTexture.index;
+	unsigned int textureImgIndex = model.textures.at(textureIndex).source;
+	std::string textureImgURI = ASSETS_RELATIVE_PATH + model.images.at(textureImgIndex).uri;
+
+	DirectX::ScratchImage image;
+	TextureLoader::LoadFromFile(textureImgURI, image);
+
+	DirectX::TexMetadata metaData = image.GetMetadata();
+	// Generate MipMaps if texture doesn't have any
+	if (metaData.mipLevels == 1) {
+		ScratchImage newImage;
+		DirectX::GenerateMipMaps(image.GetImages(), image.GetImageCount(), image.GetMetadata(), TEX_FILTER_DEFAULT, 5, newImage);
+		DirectX::TexMetadata newMetaData = newImage.GetMetadata();
+		image = std::move(newImage);
+		metaData = std::move(newMetaData);
+	}
+
+	D3D12_RESOURCE_DESC texBufferDesc = CD3DX12_RESOURCE_DESC::Tex2D(metaData.format, UINT64(metaData.width),
+		UINT(metaData.height), UINT16(metaData.arraySize),
+		UINT16(metaData.mipLevels));
+
+	app->getModuleBuffer()->createDefaultBuffer(gpuTextureBuffer, texBufferDesc);
+	app->getModuleBuffer()->createUploadBuffer(stagingTextureBuffer, GetRequiredIntermediateSize(gpuTextureBuffer.Get(), 0, image.GetImageCount()));
+
+	std::vector<D3D12_SUBRESOURCE_DATA> subData;
+	subData.reserve(image.GetImageCount());
+	// Note we are iterating over mipLevels of each array item to respect Subresource index order
+	for (size_t item = 0; item < metaData.arraySize; ++item)
+	{
+		for (size_t level = 0; level < metaData.mipLevels; ++level)
+		{
+			const DirectX::Image* subImg = image.GetImage(level, item, 0);
+			D3D12_SUBRESOURCE_DATA data = { subImg->pixels, subImg->rowPitch, subImg->slicePitch };
+			subData.push_back(data);
+		}
+	}
+
+	// Need to UpdateSubresources using mipLevels * arraySize (total number of Subresources)
+	UpdateSubresources(app->getModuleD3D12()->getCurrentBufferCommandList().Get(), gpuTextureBuffer.Get(), stagingTextureBuffer.Get(), 0, 0, UINT(metaData.mipLevels * metaData.arraySize), subData.data());
+	D3D12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition(gpuTextureBuffer.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, D3D12_RESOURCE_BARRIER_FLAG_NONE);
+	app->getModuleD3D12()->getCurrentBufferCommandList()->ResourceBarrier(1, &barrier);
+
+	D3D12_SHADER_RESOURCE_VIEW_DESC texSrvDesc = {};
+	texSrvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+	texSrvDesc.Format = gpuTextureBuffer->GetDesc().Format;
+	texSrvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+	texSrvDesc.Texture2D.MipLevels = gpuTextureBuffer->GetDesc().MipLevels;
+
+	ComPtr<ID3D12Device2> device = app->getModuleD3D12()->getDevice();
+	CD3DX12_CPU_DESCRIPTOR_HANDLE texCPUHandle(
+		app->getModuleD3D12()->getShaderVisibleDescriptorHeap()->GetCPUDescriptorHandleForHeapStart(),
+		0,
+		device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV)
+	);
+	app->getModuleD3D12()->getDevice()->CreateShaderResourceView(gpuTextureBuffer.Get(), &texSrvDesc, texCPUHandle);
+	return true;
 }

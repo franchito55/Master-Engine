@@ -1,16 +1,17 @@
 #include "Globals.h"
+#include <iostream>
 #define _USE_MATH_DEFINES
+#include "math.h"
 #include "ModuleAssignment2.h"
 #include "Application.h"
 #include "ModuleD3D12.h"
 #include "ReadData.h"
 #include "ModuleBuffer.h"
 #include "ImGuiPass.h"
-#include "math.h"
 #include "ModuleCameraEditor.h"
-#include "TextureLoader.h"
 #include "Utils.h"
-#include <iostream>
+#include "GameObject.h"
+#include "Material.h"
 
 ModuleAssignment2::ModuleAssignment2(HWND _hWnd) : hWnd(_hWnd) {}
 
@@ -22,72 +23,59 @@ bool ModuleAssignment2::init() {
 	app->setModuleAssignment2(this);
 
 	ComPtr<ID3D12Device> device = app->getModuleD3D12()->getDevice();
-	
-	readMeshFromGLTF();
 
-	for (unsigned int i = 0; i < mesh.getNumVertices(); i++) {
+	// Read the vertex and index buffers and the texture from GLTF and pack them into a GameObject
+	gameObject = createGameObjectFromGLTF(0, 0);
+
+	unsigned int vertsInTopLeftQuadrant = 0;
+	unsigned int vertsInTopRightQuadrant = 0;
+	unsigned int vertsInBottomLeftQuadrant = 0;
+	unsigned int vertsInBottomRightQuadrant = 0;
+	unsigned int vertsOutsideOf01 = 0;
+	for (unsigned int i = 0; i < gameObject->getMesh()->getNumVertices(); i++) {
+		Mesh mesh = *gameObject->getMesh();
 		char buffer[500];
+		Vertex currentVertex = mesh.getVertices()[i];
 		snprintf(buffer, sizeof(buffer), "Vertex %d:\n  Position: (%f, %f, %f)\n  Normal: (%f, %f, %f)\n TexCoord: (%f, %f)\n", i, 
-			mesh.getVertices()[i].position.x, mesh.getVertices()[i].position.y, mesh.getVertices()[i].position.z,
-			mesh.getVertices()[i].normal.x, mesh.getVertices()[i].normal.y, mesh.getVertices()[i].normal.z, 
-			mesh.getVertices()[i].texCoord.x, mesh.getVertices()[i].texCoord.y);
+			currentVertex.position.x, currentVertex.position.y, currentVertex.position.z,
+			currentVertex.normal.x, currentVertex.normal.y, currentVertex.normal.z,
+			currentVertex.texCoord.x, currentVertex.texCoord.y);
 		log(buffer);
-	}
+		
+		if (currentVertex.texCoord.x < 0.5 && currentVertex.texCoord.y < 0.5)
+			vertsInTopLeftQuadrant++;
+		else if (currentVertex.texCoord.x > 0.614 && currentVertex.texCoord.y < 0.465)
+			vertsInTopRightQuadrant++;
+		else if (currentVertex.texCoord.x < 0.5 && currentVertex.texCoord.y > 0.5)
+			vertsInBottomLeftQuadrant++;
+		else if (currentVertex.texCoord.x > 0.5 && currentVertex.texCoord.y > 0.5)
+			vertsInBottomRightQuadrant++;
 
-	for (unsigned int i = 0; i < mesh.getNumIndices(); i+=3) {
+		else if (currentVertex.texCoord.x < 0 || currentVertex.texCoord.y > 1 || currentVertex.texCoord.y < 0 || currentVertex.texCoord.y > 1)
+			vertsOutsideOf01++;
+	}
+	char buffer[500];
+	snprintf(buffer, sizeof(buffer), "Vertices in top left quadrant: %d", vertsInTopLeftQuadrant);
+	log(buffer);
+	snprintf(buffer, sizeof(buffer), "Vertices in top right quadrant: %d", vertsInTopRightQuadrant);
+	log(buffer);
+	snprintf(buffer, sizeof(buffer), "Vertices in bottom left quadrant: %d", vertsInBottomLeftQuadrant);
+	log(buffer);
+	snprintf(buffer, sizeof(buffer), "Vertices in bottom right quadrant: %d", vertsInBottomRightQuadrant);
+	log(buffer);
+	snprintf(buffer, sizeof(buffer), "Vertices outside of [0, 1]: %d", vertsOutsideOf01);
+	log(buffer);
+
+	/*for (unsigned int i = 0; i < gameObject->getMesh()->getNumIndices(); i+=3) {
+		Mesh mesh = *gameObject->getMesh();
 		char buffer[500];
 		snprintf(buffer, sizeof(buffer), "Triangle %d: %d, %d, %d,\n", i, mesh.getIndices()[i], mesh.getIndices()[i+1], mesh.getIndices()[i+2]);
 		log(buffer);
-	}
+	}*/
 
 	buildRootSignature(device);
 
 	buildPSO(device);
-
-	// Vertex buffer
-	app->getModuleBuffer()->createDefaultBuffer(gpuVertexBuffer, mesh.getNumVertices() * FLOATS_PER_VERTEX * sizeof(float));
-	app->getModuleBuffer()->createUploadBuffer(stagingVertexBuffer, mesh.getNumVertices() * FLOATS_PER_VERTEX * sizeof(float));
-	createVertexBufferView(&vBV);
-
-	// Copy vertex buffer
-	// Get a pointer to the resource in CPU (pData)
-	BYTE* pData = nullptr;
-	CD3DX12_RANGE readRange(0, 0);
-	HRESULT hr = stagingVertexBuffer.Get()->Map(0, &readRange, reinterpret_cast<void**>(&pData));
-
-	// Copy the data from the CPU array to the Resource
-	memcpy(pData, mesh.getVertices(), mesh.getNumVertices() * FLOATS_PER_VERTEX * sizeof(float));
-
-	// Invalidates the pointer -> probably marks it as "used" ???
-	stagingVertexBuffer.Get()->Unmap(0, nullptr);
-
-
-	// Index buffer
-	app->getModuleBuffer()->createDefaultBuffer(gpuIndexBuffer, mesh.getNumIndices() * sizeof(unsigned short));
-	app->getModuleBuffer()->createUploadBuffer(stagingIndexBuffer, mesh.getNumIndices() * sizeof(unsigned short));
-	createIndexBufferView(&iBV);
-
-	// Copy index buffer
-	// Get a pointer to the resource in CPU (pData)
-	hr = stagingIndexBuffer.Get()->Map(0, &readRange, reinterpret_cast<void**>(&pData));
-
-	// Copy the data from the CPU array to the Resource
-	memcpy(pData, mesh.getIndices(), mesh.getNumIndices() * sizeof(unsigned short));
-
-	// Invalidates the pointer -> probably marks it as "used" ???
-	stagingIndexBuffer.Get()->Unmap(0, nullptr);
-
-
-
-	// Init the camera matrices
-	Matrix model = Matrix::CreateScale(transform.scale) * Matrix::CreateTranslation(transform.position);
-
-	mvp = (model * app->getModuleCamera()->GetViewMatrix() * app->getModuleCamera()->GetProjectionMatrix()).Transpose();
-
-	// Copy data (vertex and index buffers) to GPU buffers
-	ComPtr<ID3D12GraphicsCommandList> copyCommandList = app->getModuleD3D12()->getCopyCommandList();
-	copyCommandList->CopyResource(gpuVertexBuffer.Get(), stagingVertexBuffer.Get());
-	copyCommandList->CopyResource(gpuIndexBuffer.Get(), stagingIndexBuffer.Get());
 	
 
 	// Init DebugDrawPass (for drawing axis and stuff)
@@ -96,66 +84,12 @@ bool ModuleAssignment2::init() {
 	debugDrawPass = new DebugDrawPass(d4.Get(), app->getModuleD3D12()->getRenderCommandQueue().Get(), false);
 
 
-
-	DirectX::ScratchImage image;
-#ifdef _DEBUG
-	TextureLoader::LoadFromDDSFile(L"../dog.dds", image);
-#else
-	TextureLoader::LoadFromDDSFile(L"./resources/dog.dds", image);
-#endif
-
-	DirectX::TexMetadata metaData = image.GetMetadata();
-	// Generate MipMaps if texture doesn't have any
-	if (metaData.mipLevels == 1) {
-		ScratchImage newImage;
-		Image ifjhakajsf = *image.GetImage(0, 0, 0);
-		hr = DirectX::GenerateMipMaps(image.GetImages(), image.GetImageCount(), image.GetMetadata(), TEX_FILTER_DEFAULT, 5, newImage);
-		DirectX::TexMetadata newMetaData = newImage.GetMetadata();
-		image = std::move(newImage);
-		metaData = std::move(newMetaData);
-	}
-
-	D3D12_RESOURCE_DESC texBufferDesc = CD3DX12_RESOURCE_DESC::Tex2D(metaData.format, UINT64(metaData.width),
-		UINT(metaData.height), UINT16(metaData.arraySize),
-		UINT16(metaData.mipLevels));
-
-	app->getModuleBuffer()->createDefaultBuffer(gpuTextureBuffer, texBufferDesc);
-	app->getModuleBuffer()->createUploadBuffer(stagingTextureBuffer, GetRequiredIntermediateSize(gpuTextureBuffer.Get(), 0, image.GetImageCount()));
-	
-	std::vector<D3D12_SUBRESOURCE_DATA> subData;
-	subData.reserve(image.GetImageCount());
-	// Note we are iterating over mipLevels of each array item to respect Subresource index order
-	for (size_t item = 0; item < metaData.arraySize; ++item)
-	{
-		for (size_t level = 0; level < metaData.mipLevels; ++level)
-		{
-			const DirectX::Image* subImg = image.GetImage(level, item, 0);
-			D3D12_SUBRESOURCE_DATA data = { subImg->pixels, subImg->rowPitch, subImg->slicePitch };
-			subData.push_back(data);
-		}
-	}
-
-	// Need to UpdateSubresources using mipLevels * arraySize (total number of Subresources)
-	UpdateSubresources(app->getModuleD3D12()->getCurrentBufferCommandList().Get(), gpuTextureBuffer.Get(), stagingTextureBuffer.Get(), 0, 0, UINT(metaData.mipLevels * metaData.arraySize), subData.data());
-	D3D12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition(gpuTextureBuffer.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, D3D12_RESOURCE_BARRIER_FLAG_NONE);
-	app->getModuleD3D12()->getCurrentBufferCommandList()->ResourceBarrier(1, &barrier);
-
-	D3D12_SHADER_RESOURCE_VIEW_DESC texSrvDesc = {};
-	texSrvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-	texSrvDesc.Format = gpuTextureBuffer->GetDesc().Format;
-	texSrvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
-	texSrvDesc.Texture2D.MipLevels = gpuTextureBuffer->GetDesc().MipLevels;
-
-	CD3DX12_CPU_DESCRIPTOR_HANDLE texCPUHandle(
-		app->getModuleD3D12()->getShaderVisibleDescriptorHeap()->GetCPUDescriptorHandleForHeapStart(),
-		0,
-		device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV)
-	);
-	app->getModuleD3D12()->getDevice()->CreateShaderResourceView(gpuTextureBuffer.Get(), &texSrvDesc, texCPUHandle);
-
-
-
+	// Copy data (vertex and index buffers) to GPU buffers
+	ComPtr<ID3D12GraphicsCommandList> copyCommandList = app->getModuleD3D12()->getCopyCommandList();
+	copyCommandList->CopyResource(gpuVertexBuffer.Get(), stagingVertexBuffer.Get());
+	copyCommandList->CopyResource(gpuIndexBuffer.Get(), stagingIndexBuffer.Get());
 	copyCommandList->Close();
+
 	ID3D12CommandList* lists[] = { copyCommandList.Get() };
 	app->getModuleD3D12()->getCopyCommandQueue()->ExecuteCommandLists(1, lists);
 	app->getModuleD3D12()->getCopyCommandQueue()->Signal(app->getModuleD3D12()->getFence().Get(), 500);
@@ -212,7 +146,7 @@ void ModuleAssignment2::render() {
 	
 	commandList->SetGraphicsRootDescriptorTable(1, app->getModuleD3D12()->getShaderVisibleDescriptorHeap()->GetGPUDescriptorHandleForHeapStart());
 
-	commandList->DrawIndexedInstanced(mesh.getNumIndices(), 1, 0, 0, 0);
+	commandList->DrawIndexedInstanced(gameObject->getMesh()->getNumIndices(), 1, 0, 0, 0);
 
 
 	ImGui::Begin("Texture info");
@@ -289,15 +223,15 @@ void ModuleAssignment2::render() {
 
 void ModuleAssignment2::postRender() {}
 
-void ModuleAssignment2::createVertexBufferView(D3D12_VERTEX_BUFFER_VIEW* vBV) {
+void ModuleAssignment2::createVertexBufferView(D3D12_VERTEX_BUFFER_VIEW* vBV, GameObject& gO) {
 	vBV->BufferLocation = gpuVertexBuffer->GetGPUVirtualAddress();
-	vBV->SizeInBytes = mesh.getNumVertices() * FLOATS_PER_VERTEX * sizeof(float);
-	vBV->StrideInBytes = FLOATS_PER_VERTEX * sizeof(float);
+	vBV->SizeInBytes = gO.getMesh()->getNumVertices() * sizeof(Vertex);
+	vBV->StrideInBytes = sizeof(Vertex);
 }
 
-void ModuleAssignment2::createIndexBufferView(D3D12_INDEX_BUFFER_VIEW* iBV) {
+void ModuleAssignment2::createIndexBufferView(D3D12_INDEX_BUFFER_VIEW* iBV, GameObject& gO) {
 	iBV->BufferLocation = gpuIndexBuffer->GetGPUVirtualAddress();
-	iBV->SizeInBytes = mesh.getNumIndices() * sizeof(unsigned short);
+	iBV->SizeInBytes = gO.getMesh()->getNumIndices() * sizeof(unsigned short);
 	iBV->Format = DXGI_FORMAT_R16_UINT;
 }
 
@@ -359,14 +293,6 @@ void ModuleAssignment2::buildPSO(ComPtr<ID3D12Device> device) {
 	layoutDescPos.AlignedByteOffset = 0;
 	layoutDescPos.InputSlotClass = D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA;
 	layoutDescPos.InstanceDataStepRate = 0;
-	D3D12_INPUT_ELEMENT_DESC layoutDescTexCoord = {};
-	layoutDescTexCoord.SemanticName = "TEXCOORD";
-	layoutDescTexCoord.SemanticIndex = 0;
-	layoutDescTexCoord.Format = DXGI_FORMAT_R32G32_FLOAT;
-	layoutDescTexCoord.InputSlot = 0;
-	layoutDescTexCoord.AlignedByteOffset = D3D12_APPEND_ALIGNED_ELEMENT;
-	layoutDescTexCoord.InputSlotClass = D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA;
-	layoutDescTexCoord.InstanceDataStepRate = 0;
 	D3D12_INPUT_ELEMENT_DESC layoutDescNormals = {};
 	layoutDescNormals.SemanticName = "NORMAL";
 	layoutDescNormals.SemanticIndex = 0;
@@ -375,7 +301,15 @@ void ModuleAssignment2::buildPSO(ComPtr<ID3D12Device> device) {
 	layoutDescNormals.AlignedByteOffset = D3D12_APPEND_ALIGNED_ELEMENT;
 	layoutDescNormals.InputSlotClass = D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA;
 	layoutDescNormals.InstanceDataStepRate = 0;
-	D3D12_INPUT_ELEMENT_DESC layout[] = { layoutDescPos, layoutDescTexCoord, layoutDescNormals };
+	D3D12_INPUT_ELEMENT_DESC layoutDescTexCoord = {};
+	layoutDescTexCoord.SemanticName = "TEXCOORD";
+	layoutDescTexCoord.SemanticIndex = 0;
+	layoutDescTexCoord.Format = DXGI_FORMAT_R32G32_FLOAT;
+	layoutDescTexCoord.InputSlot = 0;
+	layoutDescTexCoord.AlignedByteOffset = D3D12_APPEND_ALIGNED_ELEMENT;
+	layoutDescTexCoord.InputSlotClass = D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA;
+	layoutDescTexCoord.InstanceDataStepRate = 0;
+	D3D12_INPUT_ELEMENT_DESC layout[] = { layoutDescPos, layoutDescNormals, layoutDescTexCoord };
 	psoDesc.InputLayout = { layout, sizeof(layout) / sizeof(D3D12_INPUT_ELEMENT_DESC) };
 	psoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
 	psoDesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
@@ -390,7 +324,9 @@ void ModuleAssignment2::buildPSO(ComPtr<ID3D12Device> device) {
 	device->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&pso));
 }
 
-void ModuleAssignment2::readMeshFromGLTF() {
+GameObject* ModuleAssignment2::createGameObjectFromGLTF(unsigned int meshIndex, unsigned int primitiveIndex) {
+	GameObject* gO = new GameObject();
+
 	// =================== Load model using GLTF ===================
 	tinygltf::TinyGLTF tinyGLTF;
 	tinygltf::Model tinyGLTFModel;
@@ -400,8 +336,51 @@ void ModuleAssignment2::readMeshFromGLTF() {
 		MessageBoxA(hWnd, "Cannot find file", "Error loading GLTF file", 0);
 	}
 
-	Utils::loadIntoMesh(tinyGLTFModel, mesh, tinyGLTFModel.meshes.at(0).primitives.at(0));
-	const auto& itPos = tinyGLTFModel.meshes.at(0).primitives.at(0).attributes.find("POSITION");
+	// Load vertices from GLTF
+	Utils::loadMeshIntoGameObjectGLTF(tinyGLTFModel, meshIndex, primitiveIndex, gO);
+
+	// Vertex buffer
+	app->getModuleBuffer()->createDefaultBuffer(gpuVertexBuffer, gO->getMesh()->getNumVertices() * sizeof(Vertex));
+	app->getModuleBuffer()->createUploadBuffer(stagingVertexBuffer, gO->getMesh()->getNumVertices() * sizeof(Vertex));
+	createVertexBufferView(&vBV, *gO);
+
+	// Copy vertex buffer
+	// Get a pointer to the resource in CPU (pData)
+	BYTE* pData = nullptr;
+	CD3DX12_RANGE readRange(0, 0);
+	HRESULT hr = stagingVertexBuffer.Get()->Map(0, &readRange, reinterpret_cast<void**>(&pData));
+
+	// Copy the data from the CPU array to the Resource
+	memcpy(pData, gO->getMesh()->getVertices(), gO->getMesh()->getNumVertices() * sizeof(Vertex));
+
+	// Invalidates the pointer -> probably marks it as "used" ???
+	stagingVertexBuffer.Get()->Unmap(0, nullptr);
+
+
+	// Index buffer
+	app->getModuleBuffer()->createDefaultBuffer(gpuIndexBuffer, gO->getMesh()->getNumIndices() * sizeof(unsigned short));
+	app->getModuleBuffer()->createUploadBuffer(stagingIndexBuffer, gO->getMesh()->getNumIndices() * sizeof(unsigned short));
+	createIndexBufferView(&iBV, *gO);
+
+	// Copy index buffer
+	// Get a pointer to the resource in CPU (pData)
+	hr = stagingIndexBuffer.Get()->Map(0, &readRange, reinterpret_cast<void**>(&pData));
+
+	// Copy the data from the CPU array to the Resource
+	memcpy(pData, gO->getMesh()->getIndices(), gO->getMesh()->getNumIndices() * sizeof(unsigned short));
+
+	// Invalidates the pointer -> probably marks it as "used" ???
+	stagingIndexBuffer.Get()->Unmap(0, nullptr);
+
+	// Load texture from GLTF
+	Utils::loadTextureIntoGameObjectGLTF(tinyGLTFModel, meshIndex, primitiveIndex, stagingTextureBuffer, gpuTextureBuffer);
+
+	// Init the camera matrices
+	Matrix model = Matrix::CreateScale(transform.scale) * Matrix::CreateTranslation(transform.position);
+
+	mvp = (model * app->getModuleCamera()->GetViewMatrix() * app->getModuleCamera()->GetProjectionMatrix()).Transpose();
+
+	return gO;
 }
 
 void ModuleAssignment2::log(const char* t) {

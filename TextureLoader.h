@@ -1,8 +1,9 @@
 #pragma once
 #include "Globals.h"
 #include "DirectXTex.h"
+#include <iostream>
 
 class TextureLoader {
 public:
-	static void LoadFromDDSFile(const wchar_t* szFile, ScratchImage& image);
+	static bool LoadFromFile(const std::string& szFile, ScratchImage& image);
 };

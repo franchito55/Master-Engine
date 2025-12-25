@@ -5,11 +5,9 @@
 #include "structs/Transform.h"
 #include "Mesh.h"
 
-#define FLOATS_PER_VERTEX 8 // Position (3), Texture coordinates (2), Normal (3)
-
-struct Vertex;
 class Application;
 extern Application* app;
+class GameObject;
 
 class ModuleAssignment2 : public Module {
 public:
@@ -20,8 +18,8 @@ public:
 	void preRender() override;
 	void render() override;
 	void postRender() override;
-	void createVertexBufferView(D3D12_VERTEX_BUFFER_VIEW* _vBV);
-	void createIndexBufferView(D3D12_INDEX_BUFFER_VIEW* _iBV);
+	void createVertexBufferView(D3D12_VERTEX_BUFFER_VIEW* _vBV, GameObject& gO);
+	void createIndexBufferView(D3D12_INDEX_BUFFER_VIEW* _iBV, GameObject& gO);
 	Vector3 getTrianglePosition() { return transform.position; }
 
 private:
@@ -49,7 +47,7 @@ private:
 		{ Vector3(1.0f, 1.0f, 0.0f), Vector2(1.25f, -0.25f) }
 	};*/
 
-	Mesh mesh;
+	GameObject* gameObject = nullptr;
 
 	Transform transform = {};
 
@@ -72,7 +70,7 @@ private:
 	void buildPSO(ComPtr<ID3D12Device> device);
 	D3D12_FILTER imGuiFilteringToDX12(unsigned int imGuiIndex);
 	D3D12_TEXTURE_ADDRESS_MODE imGuiAddressingToDX12(unsigned int imGuiIndex);
-	void readMeshFromGLTF();
+	GameObject* createGameObjectFromGLTF(unsigned int meshIndex, unsigned int primitiveIndex);
 
 	void log(const char* t);
 
