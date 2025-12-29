@@ -10,15 +10,11 @@
 #include "ImGuiPass.h"
 #include "ModuleCameraEditor.h"
 #include "Utils.h"
-#include "GameObject.h"
 #include "Material.h"
 
 ModuleAssignment2::ModuleAssignment2(HWND _hWnd) : hWnd(_hWnd) {}
 
 bool ModuleAssignment2::init() {
-
-	// The duck is HUGE for some reason (hundreds of units big)
-	transform.scale = Vector3(0.01f, 0.01f, 0.01f);
 
 	app->setModuleAssignment2(this);
 
@@ -26,6 +22,8 @@ bool ModuleAssignment2::init() {
 
 	// Read the vertex and index buffers and the texture from GLTF and pack them into a GameObject
 	gameObject = createGameObjectFromGLTF(0, 0);
+	// The duck is HUGE for some reason (hundreds of units big)
+	gameObject->getTransform()->scale = Vector3(0.01f, 0.01f, 0.01f);
 
 	unsigned int vertsInTopLeftQuadrant = 0;
 	unsigned int vertsInTopRightQuadrant = 0;
@@ -122,7 +120,7 @@ void ModuleAssignment2::preRender() {
 
 void ModuleAssignment2::render() {
 
-	model = Matrix::CreateScale(transform.scale) * Matrix::CreateTranslation(transform.position);
+	model = Matrix::CreateScale(gameObject->getTransform()->scale) * Matrix::CreateTranslation(gameObject->getTransform()->position);
 	mvp = (model * app->getModuleCamera()->GetViewMatrix() * app->getModuleCamera()->GetProjectionMatrix()).Transpose();
 
 	ComPtr<ID3D12GraphicsCommandList> commandList = app->getModuleD3D12()->getCurrentBufferCommandList();
@@ -139,20 +137,17 @@ void ModuleAssignment2::render() {
 	mvpData->mvp = mvp;
 	commandList->SetGraphicsRootConstantBufferView(0, mvpCB->GetGPUVirtualAddress());
 
-	modelData->modelMatrix = model;
+	// Need to transpose model for row-major in GPU
+	modelData->modelMatrix = model.Transpose();
 	commandList->SetGraphicsRootConstantBufferView(1, modelCB->GetGPUVirtualAddress());
 
+	// Normal matrix = Transpose of inverse of model matrix
 	Matrix invTransModel = model.Invert().Transpose();
 	normalData->normalMatrix = {
 		invTransModel._11, invTransModel._12, invTransModel._13,
 		invTransModel._21, invTransModel._22, invTransModel._23,
 		invTransModel._31, invTransModel._32, invTransModel._33,
 	};
-	/*normalData->normalMatrix = {
-		Matrix::Identity._11, Matrix::Identity._12, Matrix::Identity._13,
-		Matrix::Identity._21, Matrix::Identity._22, Matrix::Identity._23,
-		Matrix::Identity._31, Matrix::Identity._22, Matrix::Identity._33,
-	};*/
 	commandList->SetGraphicsRootConstantBufferView(2, normalCB->GetGPUVirtualAddress());
 
 	cameraData->cameraPos = app->getModuleCamera()->GetTransform().position;
@@ -207,7 +202,8 @@ void ModuleAssignment2::render() {
 
 	// Quad info window
 	ImGui::Begin("Geometry");
-	ImGui::DragFloat3("Quad position", &transform.position.x, 0.1f, -100.0f, 100.0f);
+	ImGui::DragFloat3("Position", &gameObject->getTransform()->position.x, 0.1f, -100.0f, 100.0f);
+	ImGui::DragFloat3("Scale", &gameObject->getTransform()->scale.x, 0.001f, -100.0f, 100.0f);
 	ImGui::End();
 
 	ImGui::Begin("Debug Info");
@@ -350,8 +346,8 @@ void ModuleAssignment2::buildPSO(ComPtr<ID3D12Device> device) {
 	layoutDescPos.InputSlotClass = D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA;
 	layoutDescPos.InstanceDataStepRate = 0;
 	D3D12_INPUT_ELEMENT_DESC layoutDescNormals = {};
-	layoutDescNormals.SemanticName = "TEXCOORD";
-	layoutDescNormals.SemanticIndex = 1;
+	layoutDescNormals.SemanticName = "NORMAL";
+	layoutDescNormals.SemanticIndex = 0;
 	layoutDescNormals.Format = DXGI_FORMAT_R32G32B32_FLOAT;
 	layoutDescNormals.InputSlot = 0;
 	layoutDescNormals.AlignedByteOffset = D3D12_APPEND_ALIGNED_ELEMENT;
@@ -417,7 +413,7 @@ GameObject* ModuleAssignment2::createGameObjectFromGLTF(unsigned int meshIndex, 
 	Utils::loadTextureIntoGameObjectGLTF(tinyGLTFModel, meshIndex, primitiveIndex, stagingTextureBuffer, gpuTextureBuffer);
 
 	// Init the camera matrices
-	Matrix model = Matrix::CreateScale(transform.scale) * Matrix::CreateTranslation(transform.position);
+	Matrix model = Matrix::CreateScale(gO->getTransform()->scale) * Matrix::CreateTranslation(gO->getTransform()->position);
 
 	mvp = (model * app->getModuleCamera()->GetViewMatrix() * app->getModuleCamera()->GetProjectionMatrix()).Transpose();
 

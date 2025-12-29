@@ -4,10 +4,10 @@
 #include "DebugDrawPass.h"
 #include "structs/Transform.h"
 #include "Mesh.h"
+#include "GameObject.h"
 
 class Application;
 extern Application* app;
-class GameObject;
 
 struct MvpCB
 {
@@ -59,7 +59,7 @@ public:
 	void postRender() override;
 	void createVertexBufferView(D3D12_VERTEX_BUFFER_VIEW* _vBV, GameObject& gO);
 	void createIndexBufferView(D3D12_INDEX_BUFFER_VIEW* _iBV, GameObject& gO);
-	Vector3 getTrianglePosition() { return transform.position; }
+	Vector3* getObjectPosition() { return &gameObject->getTransform()->position; }
 
 private:
 	HWND hWnd;
@@ -87,8 +87,6 @@ private:
 	};*/
 
 	GameObject* gameObject = nullptr;
-
-	Transform transform = {};
 
 	Matrix model;
 	Matrix mvp;

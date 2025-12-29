@@ -16,12 +16,12 @@ cbuffer NormalMatrixCB : register(b2)
 struct VertexOutput {
     float2 texCoord : TEXCOORD0;
     float4 position : SV_POSITION;
-    float3 normal : TEXCOORD1;
-    float3 worldPosition : TEXCOORD2;
+    float3 normal : NORMAL;
+    float3 worldPosition : WORLDPOS;
 };
 
 
-VertexOutput main(float3 pos : MY_POS, float2 texCoord : TEXCOORD0, float3 normal : TEXCOORD1)
+VertexOutput main(float3 pos : MY_POS, float2 texCoord : TEXCOORD, float3 normal : NORMAL)
 {
     VertexOutput output;
 
