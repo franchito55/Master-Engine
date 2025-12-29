@@ -30,3 +30,16 @@ void ModuleBuffer::createDefaultBuffer(ComPtr<ID3D12Resource>& resourceHandle, D
 	CD3DX12_HEAP_PROPERTIES vbHeapProps(D3D12_HEAP_TYPE_DEFAULT);
 	app->getModuleD3D12()->getDevice()->CreateCommittedResource(&vbHeapProps, D3D12_HEAP_FLAG_NONE, &bufferDesc, D3D12_RESOURCE_STATE_COPY_DEST, nullptr, IID_PPV_ARGS(&resourceHandle));
 }
+
+void ModuleBuffer::copyDataToBuffer(ComPtr<ID3D12Resource>& resourceHandle, const void* data, const size_t size) {
+	// Get a pointer to the resource in CPU (pData)
+	BYTE* pData = nullptr;
+	CD3DX12_RANGE readRange(0, 0);
+	HRESULT hr = resourceHandle.Get()->Map(0, &readRange, reinterpret_cast<void**>(&pData));
+
+	// Copy the data from the CPU array to the Resource
+	memcpy(pData, data, size);
+
+	// Invalidates the pointer -> probably marks it as "used" ???
+	resourceHandle.Get()->Unmap(0, nullptr);
+}

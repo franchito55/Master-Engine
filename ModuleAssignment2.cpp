@@ -73,6 +73,8 @@ bool ModuleAssignment2::init() {
 		log(buffer);
 	}*/
 
+	initConstantBufferViews(device);
+
 	buildRootSignature(device);
 
 	buildPSO(device);
@@ -132,19 +134,57 @@ void ModuleAssignment2::render() {
 	commandList->ClearRenderTargetView(*app->getModuleD3D12()->getCurrentRtvCpuDescriptorHandle(), backgroundColor, 0, nullptr);
 
 	commandList->SetGraphicsRootSignature(rootSignature.Get());
-	commandList->SetGraphicsRoot32BitConstants(0, sizeof(Matrix) / sizeof(UINT32), &mvp, 0);
+
+	// Set cbuffers
+	mvpData->mvp = mvp;
+	commandList->SetGraphicsRootConstantBufferView(0, mvpCB->GetGPUVirtualAddress());
+
+	modelData->modelMatrix = model;
+	commandList->SetGraphicsRootConstantBufferView(1, modelCB->GetGPUVirtualAddress());
+
+	Matrix invTransModel = model.Invert().Transpose();
+	normalData->normalMatrix = {
+		invTransModel._11, invTransModel._12, invTransModel._13,
+		invTransModel._21, invTransModel._22, invTransModel._23,
+		invTransModel._31, invTransModel._32, invTransModel._33,
+	};
+	/*normalData->normalMatrix = {
+		Matrix::Identity._11, Matrix::Identity._12, Matrix::Identity._13,
+		Matrix::Identity._21, Matrix::Identity._22, Matrix::Identity._23,
+		Matrix::Identity._31, Matrix::Identity._22, Matrix::Identity._33,
+	};*/
+	commandList->SetGraphicsRootConstantBufferView(2, normalCB->GetGPUVirtualAddress());
+
+	cameraData->cameraPos = app->getModuleCamera()->GetTransform().position;
+	commandList->SetGraphicsRootConstantBufferView(4, cameraCB->GetGPUVirtualAddress());
+
+	materialData->materialDiffuse = phongMaterialDiffuse;
+	materialData->materialKd = phongMaterialKd;
+	materialData->materialKs = phongMaterialKs;
+	materialData->materialN = phongMaterialN;
+	materialData->materialKa = phongMaterialKa;
+	commandList->SetGraphicsRootConstantBufferView(5, materialCB->GetGPUVirtualAddress());
+
+	lightData->lightPos = phongLightPosition;
+	lightData->lightColor = phongLightColor;
+	commandList->SetGraphicsRootConstantBufferView(6, lightCB->GetGPUVirtualAddress());
+
+	// Set current index and vertex buffers
 	commandList->IASetIndexBuffer(&iBV);
 	commandList->IASetVertexBuffers(0, 1, &vBV);
+
+	// Set viewport & scissor (whole screen)
 	D3D12_VIEWPORT vp = { 0.0f, 0.0f, float(app->getWindowWidth()), float(app->getWindowHeight()), 0.0f, 1.0f };
 	commandList->RSSetViewports(1, &vp);
 	D3D12_RECT scissor = { 0, 0, app->getWindowWidth(), app->getWindowHeight() };
 	commandList->RSSetScissorRects(1, &scissor);
+
 	commandList->IASetPrimitiveTopology(D3D10_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
 	ID3D12DescriptorHeap* srvHeap[1] = {app->getModuleD3D12()->getShaderVisibleDescriptorHeap().Get()};
 	commandList->SetDescriptorHeaps(1, srvHeap);
 	
-	commandList->SetGraphicsRootDescriptorTable(1, app->getModuleD3D12()->getShaderVisibleDescriptorHeap()->GetGPUDescriptorHandleForHeapStart());
+	commandList->SetGraphicsRootDescriptorTable(3, app->getModuleD3D12()->getShaderVisibleDescriptorHeap()->GetGPUDescriptorHandleForHeapStart());
 
 	commandList->DrawIndexedInstanced(gameObject->getMesh()->getNumIndices(), 1, 0, 0, 0);
 
@@ -174,6 +214,16 @@ void ModuleAssignment2::render() {
 	ImGui::Checkbox("Show XZ plane grid", &showXZGrid);
 	ImGui::Checkbox("Show world origin axis triad", &showAxisTriad);
 	ImGui::Checkbox("Show camera target position", &showCameraTarget);
+	ImGui::End();
+
+	ImGui::Begin("Phong");
+	ImGui::DragFloat3("Light position", &phongLightPosition.x, 0.1f, -5.0f, 5.0f);
+	ImGui::DragFloat3("Light color", &phongLightColor.x, 0.01f, 0.0f, 1.0f);
+	ImGui::DragFloat3("Material diffuse", &phongMaterialDiffuse.x, 0.01f, 0.0f, 1.0f);
+	ImGui::DragFloat("Material Kd", &phongMaterialKd, 0.01f, 0.0f, 1.0f);
+	ImGui::DragFloat("Material Ks", &phongMaterialKs, 0.01f, 0.0f, 1.0f);
+	ImGui::DragFloat("Material Ka", &phongMaterialKa, 0.01f, 0.0f, 1.0f);
+	ImGui::DragFloat("Material n", &phongMaterialN, 0.5f, 1.0f, 1500.0f);
 	ImGui::End();
 
 	dd::clear();
@@ -256,13 +306,15 @@ D3D12_TEXTURE_ADDRESS_MODE ModuleAssignment2::imGuiAddressingToDX12(unsigned int
 void ModuleAssignment2::buildRootSignature(ComPtr<ID3D12Device> device) {
 	CD3DX12_ROOT_SIGNATURE_DESC rootSigDesc = {};
 
-	CD3DX12_ROOT_PARAMETER rootParameters[2] = {};
+	CD3DX12_ROOT_PARAMETER rootParameters[7] = {};
 
-	rootParameters[0].InitAsConstants(sizeof(Matrix) / sizeof(UINT32), 0, 0, D3D12_SHADER_VISIBILITY_ALL);
+	rootParameters[0].InitAsConstantBufferView(0, 0, D3D12_SHADER_VISIBILITY_VERTEX);
+	rootParameters[1].InitAsConstantBufferView(1, 0, D3D12_SHADER_VISIBILITY_VERTEX);
+	rootParameters[2].InitAsConstantBufferView(2, 0, D3D12_SHADER_VISIBILITY_VERTEX);
 
 	CD3DX12_DESCRIPTOR_RANGE tableRange;
 	tableRange.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0);
-	rootParameters[1].InitAsDescriptorTable(1, &tableRange, D3D12_SHADER_VISIBILITY_PIXEL);
+	rootParameters[3].InitAsDescriptorTable(1, &tableRange, D3D12_SHADER_VISIBILITY_PIXEL);
 
 	CD3DX12_STATIC_SAMPLER_DESC sampler;
 	sampler.Init(0, 
@@ -271,7 +323,11 @@ void ModuleAssignment2::buildRootSignature(ComPtr<ID3D12Device> device) {
 		imGuiAddressingToDX12(currentTextureAddressingMode),
 		imGuiAddressingToDX12(currentTextureAddressingMode));
 
-	rootSigDesc.Init(2, rootParameters, 1, &sampler, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
+	rootParameters[4].InitAsConstantBufferView(3, 0, D3D12_SHADER_VISIBILITY_PIXEL);
+	rootParameters[5].InitAsConstantBufferView(4, 0, D3D12_SHADER_VISIBILITY_PIXEL);
+	rootParameters[6].InitAsConstantBufferView(5, 0, D3D12_SHADER_VISIBILITY_PIXEL);
+
+	rootSigDesc.Init(7, rootParameters, 1, &sampler, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
 
 	ComPtr<ID3DBlob> rootSigBlob;
 	D3D12SerializeRootSignature(&rootSigDesc, D3D_ROOT_SIGNATURE_VERSION_1, &rootSigBlob, nullptr);
@@ -294,8 +350,8 @@ void ModuleAssignment2::buildPSO(ComPtr<ID3D12Device> device) {
 	layoutDescPos.InputSlotClass = D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA;
 	layoutDescPos.InstanceDataStepRate = 0;
 	D3D12_INPUT_ELEMENT_DESC layoutDescNormals = {};
-	layoutDescNormals.SemanticName = "NORMAL";
-	layoutDescNormals.SemanticIndex = 0;
+	layoutDescNormals.SemanticName = "TEXCOORD";
+	layoutDescNormals.SemanticIndex = 1;
 	layoutDescNormals.Format = DXGI_FORMAT_R32G32B32_FLOAT;
 	layoutDescNormals.InputSlot = 0;
 	layoutDescNormals.AlignedByteOffset = D3D12_APPEND_ALIGNED_ELEMENT;
@@ -345,16 +401,7 @@ GameObject* ModuleAssignment2::createGameObjectFromGLTF(unsigned int meshIndex, 
 	createVertexBufferView(&vBV, *gO);
 
 	// Copy vertex buffer
-	// Get a pointer to the resource in CPU (pData)
-	BYTE* pData = nullptr;
-	CD3DX12_RANGE readRange(0, 0);
-	HRESULT hr = stagingVertexBuffer.Get()->Map(0, &readRange, reinterpret_cast<void**>(&pData));
-
-	// Copy the data from the CPU array to the Resource
-	memcpy(pData, gO->getMesh()->getVertices(), gO->getMesh()->getNumVertices() * sizeof(Vertex));
-
-	// Invalidates the pointer -> probably marks it as "used" ???
-	stagingVertexBuffer.Get()->Unmap(0, nullptr);
+	ModuleBuffer::copyDataToBuffer(stagingVertexBuffer, gO->getMesh()->getVertices(), gO->getMesh()->getNumVertices() * sizeof(Vertex));
 
 
 	// Index buffer
@@ -363,14 +410,8 @@ GameObject* ModuleAssignment2::createGameObjectFromGLTF(unsigned int meshIndex, 
 	createIndexBufferView(&iBV, *gO);
 
 	// Copy index buffer
-	// Get a pointer to the resource in CPU (pData)
-	hr = stagingIndexBuffer.Get()->Map(0, &readRange, reinterpret_cast<void**>(&pData));
+	ModuleBuffer::copyDataToBuffer(stagingIndexBuffer, gO->getMesh()->getIndices(), gO->getMesh()->getNumIndices() * sizeof(unsigned short));
 
-	// Copy the data from the CPU array to the Resource
-	memcpy(pData, gO->getMesh()->getIndices(), gO->getMesh()->getNumIndices() * sizeof(unsigned short));
-
-	// Invalidates the pointer -> probably marks it as "used" ???
-	stagingIndexBuffer.Get()->Unmap(0, nullptr);
 
 	// Load texture from GLTF
 	Utils::loadTextureIntoGameObjectGLTF(tinyGLTFModel, meshIndex, primitiveIndex, stagingTextureBuffer, gpuTextureBuffer);
@@ -381,6 +422,32 @@ GameObject* ModuleAssignment2::createGameObjectFromGLTF(unsigned int meshIndex, 
 	mvp = (model * app->getModuleCamera()->GetViewMatrix() * app->getModuleCamera()->GetProjectionMatrix()).Transpose();
 
 	return gO;
+}
+
+void ModuleAssignment2::initConstantBufferViews(ComPtr<ID3D12Device> device) {
+	// Create and map once MvpCB
+	app->getModuleBuffer()->createUploadBuffer(mvpCB, sizeof(MvpCB));
+	mvpCB->Map(0, nullptr, reinterpret_cast<void**>(&mvpData));
+
+	// Create and map once ModelCB
+	app->getModuleBuffer()->createUploadBuffer(modelCB, sizeof(ModelMatrixCB));
+	modelCB->Map(0, nullptr, reinterpret_cast<void**>(&modelData));
+
+	// Create and map once normalCB
+	app->getModuleBuffer()->createUploadBuffer(normalCB, sizeof(NormalMatrixCB));
+	normalCB->Map(0, nullptr, reinterpret_cast<void**>(&normalData));
+
+	// Create and map once cameraCB (this would normally be on the Camera --> move to Camera)
+	app->getModuleBuffer()->createUploadBuffer(cameraCB, sizeof(CameraCB));
+	cameraCB->Map(0, nullptr, reinterpret_cast<void**>(&cameraData));
+
+	// Create and map once MvpCB (this would normally be on the Light --> move to Light)
+	app->getModuleBuffer()->createUploadBuffer(lightCB, sizeof(LightCB));
+	lightCB->Map(0, nullptr, reinterpret_cast<void**>(&lightData));
+
+	// Create and map once MvpCB
+	app->getModuleBuffer()->createUploadBuffer(materialCB, sizeof(MaterialCB));
+	materialCB->Map(0, nullptr, reinterpret_cast<void**>(&materialData));
 }
 
 void ModuleAssignment2::log(const char* t) {

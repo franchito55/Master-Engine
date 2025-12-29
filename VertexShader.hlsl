@@ -1,20 +1,36 @@
-cbuffer Transforms : register(b0)
+cbuffer MvpCB : register(b0)
 {
     float4x4 mvp;
 }
 
+cbuffer ModelMatrixCB : register(b1)
+{
+    float4x4 modelMatrix;
+}
+
+cbuffer NormalMatrixCB : register(b2)
+{
+    float3x3 normalMatrix;
+}
+
 struct VertexOutput {
-    float2 texCoord : TEXCOORD;
+    float2 texCoord : TEXCOORD0;
     float4 position : SV_POSITION;
-    float3 normal : NORMAL;
+    float3 normal : TEXCOORD1;
+    float3 worldPosition : TEXCOORD2;
 };
 
-VertexOutput main(float3 pos : MY_POS, float2 texCoord : TEXCOORD, float3 normal : NORMAL)
+
+VertexOutput main(float3 pos : MY_POS, float2 texCoord : TEXCOORD0, float3 normal : TEXCOORD1)
 {
     VertexOutput output;
+
     output.position = mul(float4(pos, 1.0), mvp);
     output.texCoord = texCoord;
-    output.normal = normal;
+
+    output.normal = mul(normalMatrix, normal); // Normal interpolated
+    float4 worldPos = mul(float4(pos, 1.0), modelMatrix);
+    output.worldPosition = worldPos.xyz;
 
     return output;
 }
