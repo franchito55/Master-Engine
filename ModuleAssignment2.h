@@ -32,12 +32,11 @@ struct CameraCB
 
 struct MaterialCB
 {
-	float materialKd;
-	float materialKs;
-	float materialN;
-	float materialKa;
-	// need to define members in this order since float3 takes up an entire register even though it's 12 bytes
+	Vector3 materialRf0;
+	float _padding;
 	Vector3 materialDiffuse;
+	float _padding2;
+	float materialN;
 };
 
 struct LightCB
@@ -115,11 +114,9 @@ private:
 	Vector3 phongLightPosition = Vector3(0.0f, 4.0f, 2.0f);
 	Vector3 phongLightColor = Vector3(1.0f, 1.0f, 1.0f);
 
-	Vector3 phongMaterialDiffuse = Vector3(1.0f, 1.0f, 1.0f);
-	float phongMaterialKd = 0.85f;
-	float phongMaterialKs = 0.35f;
-	float phongMaterialKa = 0.1f;
-	float phongMaterialN = 32.0f;
+	Vector3 pbrMaterialDiffuse = Vector3(1.0f, 1.0f, 1.0f);
+	Vector3 pbrMaterialRf0 = Vector3(0.21f, 0.21f, 0.21f);
+	float pbrMaterialN = 32.0f;
 
 
 	bool showAxisTriad = true;

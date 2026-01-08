@@ -1,3 +1,5 @@
+static const float PI = 3.14159265f;
+
 Texture2D colourTex : register(t0);
 
 SamplerState colourSampler : register(s0);
@@ -17,12 +19,11 @@ cbuffer CameraCB : register(b3)
 
 cbuffer MaterialCB : register(b4)
 {
-    float materialKd;
-    float materialKs;
-    float materialN;
-    float materialKa;
-    // need to define members in this order since float3 takes up an entire register even though it's 12 bytes
+    float3 materialRf0;
+    float _pad3; // Padding to 16B
     float3 materialDiffuse;
+    float _pad4;
+    float materialN;
 };
 
 cbuffer LightCB : register(b5)
@@ -33,20 +34,44 @@ cbuffer LightCB : register(b5)
     float _pad2; // Padding to 16B
 };
 
+float3 maxRGB(float3 color)
+{
+    float maxValue = max(max(color.r, color.g), color.b);
+    return float3(maxValue, maxValue, maxValue);
+}
+
+float3 FresnelSchlick(float cosTheta)
+{
+    return materialRf0 + (1 - materialRf0) * pow(1 - cosTheta, 5);
+}
+
 float4 main(VertexOutput input) : SV_TARGET
 {
     float3 N = normalize(input.normal);
     float3 L = normalize(lightPos - input.worldPosition);
-    float lambertian = max(dot(N, L), 0.0);
-    float specular = 0.0;
-    if (lambertian > 0.0)
-    {
-        float3 V = normalize(cameraPos - input.worldPosition); // Vector to viewer
-        float3 H = normalize(L + V); // Blinn-Phong, use halfway vector instead of Reflection vector
-        // Compute the specular term
-        float specAngle = max(dot(N, H), 0.0);
-        specular = pow(specAngle, materialN);
-    }
-    float3 albedo = colourTex.Sample(colourSampler, input.texCoords);
-    return float4(materialKa * albedo + materialKd * lambertian * albedo * lightColor + materialKs * specular * lightColor, 1.0f);
+    float3 V = normalize(cameraPos - input.worldPosition);
+    float3 H = normalize(L + V);
+    
+    float NdotL = max(dot(N, L), 0.0);
+    float NdotH = max(dot(N, H), 0.0);
+    float VdotH = max(dot(V, H), 0.0);
+    
+    float3 albedo = colourTex.Sample(colourSampler, input.texCoords) * materialDiffuse;
+    
+    // Diffuse -> reflected color (not specular)
+    float3 diffuse = albedo * (1 - maxRGB(materialRf0)) / PI;
+    
+    // Fresnel -> how much of the reflected light is specular?
+    float3 F = FresnelSchlick(VdotH);
+    
+    // Specular
+    float specular = F * pow(NdotH, materialN);
+    
+    float3 color =
+        (diffuse + specular) // BSDF
+        * lightColor * NdotL
+        + 0.03 * albedo; // ambient
+    
+    return float4(color, 1.0);
+
 }

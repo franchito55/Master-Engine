@@ -153,11 +153,9 @@ void ModuleAssignment2::render() {
 	cameraData->cameraPos = app->getModuleCamera()->GetTransform().position;
 	commandList->SetGraphicsRootConstantBufferView(4, cameraCB->GetGPUVirtualAddress());
 
-	materialData->materialDiffuse = phongMaterialDiffuse;
-	materialData->materialKd = phongMaterialKd;
-	materialData->materialKs = phongMaterialKs;
-	materialData->materialN = phongMaterialN;
-	materialData->materialKa = phongMaterialKa;
+	materialData->materialN = pbrMaterialN;
+	materialData->materialRf0 = pbrMaterialRf0;
+	materialData->materialDiffuse = pbrMaterialDiffuse;
 	commandList->SetGraphicsRootConstantBufferView(5, materialCB->GetGPUVirtualAddress());
 
 	lightData->lightPos = phongLightPosition;
@@ -214,12 +212,10 @@ void ModuleAssignment2::render() {
 
 	ImGui::Begin("Phong");
 	ImGui::DragFloat3("Light position", &phongLightPosition.x, 0.1f, -5.0f, 5.0f);
-	ImGui::DragFloat3("Light color", &phongLightColor.x, 0.01f, 0.0f, 1.0f);
-	ImGui::DragFloat3("Material diffuse", &phongMaterialDiffuse.x, 0.01f, 0.0f, 1.0f);
-	ImGui::DragFloat("Material Kd", &phongMaterialKd, 0.01f, 0.0f, 1.0f);
-	ImGui::DragFloat("Material Ks", &phongMaterialKs, 0.01f, 0.0f, 1.0f);
-	ImGui::DragFloat("Material Ka", &phongMaterialKa, 0.01f, 0.0f, 1.0f);
-	ImGui::DragFloat("Material n", &phongMaterialN, 0.5f, 1.0f, 1500.0f);
+	ImGui::ColorPicker3("Light color", &phongLightColor.x);
+	ImGui::ColorPicker3("Material diffuse", &pbrMaterialDiffuse.x);
+	ImGui::DragFloat3("Material Rf0", &pbrMaterialRf0.x, 0.01f, 0.0f, 1.0f);
+	ImGui::DragFloat("Material n", &pbrMaterialN, 0.5f, 1.0f, 1500.0f);
 	ImGui::End();
 
 	dd::clear();
