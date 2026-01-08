@@ -111,12 +111,12 @@ private:
 	MaterialCB* materialData = nullptr;
 
 
-	Vector3 phongLightPosition = Vector3(0.0f, 4.0f, 2.0f);
-	Vector3 phongLightColor = Vector3(1.0f, 1.0f, 1.0f);
+	Vector3 pbrLightPosition = Vector3(0.0f, 4.0f, 2.0f);
+	Vector3 pbrLightColor = Vector3(1.0f, 1.0f, 1.0f);
 
 	Vector3 pbrMaterialDiffuse = Vector3(1.0f, 1.0f, 1.0f);
-	Vector3 pbrMaterialRf0 = Vector3(0.21f, 0.21f, 0.21f);
-	float pbrMaterialN = 32.0f;
+	Vector3 pbrMaterialRf0 = Vector3(0.015f, 0.015f, 0.015f);
+	float pbrMaterialN = 64.0f;
 
 
 	bool showAxisTriad = true;

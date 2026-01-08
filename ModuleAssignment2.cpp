@@ -158,8 +158,8 @@ void ModuleAssignment2::render() {
 	materialData->materialDiffuse = pbrMaterialDiffuse;
 	commandList->SetGraphicsRootConstantBufferView(5, materialCB->GetGPUVirtualAddress());
 
-	lightData->lightPos = phongLightPosition;
-	lightData->lightColor = phongLightColor;
+	lightData->lightPos = pbrLightPosition;
+	lightData->lightColor = pbrLightColor;
 	commandList->SetGraphicsRootConstantBufferView(6, lightCB->GetGPUVirtualAddress());
 
 	// Set current index and vertex buffers
@@ -211,10 +211,10 @@ void ModuleAssignment2::render() {
 	ImGui::End();
 
 	ImGui::Begin("Phong");
-	ImGui::DragFloat3("Light position", &phongLightPosition.x, 0.1f, -5.0f, 5.0f);
-	ImGui::ColorPicker3("Light color", &phongLightColor.x);
-	ImGui::ColorPicker3("Material diffuse", &pbrMaterialDiffuse.x);
-	ImGui::DragFloat3("Material Rf0", &pbrMaterialRf0.x, 0.01f, 0.0f, 1.0f);
+	ImGui::DragFloat3("Light position", &pbrLightPosition.x, 0.1f, -5.0f, 5.0f);
+	ImGui::ColorEdit3("Light color", &pbrLightColor.x);
+	ImGui::ColorEdit3("Material diffuse", &pbrMaterialDiffuse.x);
+	ImGui::ColorEdit3("Material Rf0", &pbrMaterialRf0.x, 0.01f);
 	ImGui::DragFloat("Material n", &pbrMaterialN, 0.5f, 1.0f, 1500.0f);
 	ImGui::End();
 
