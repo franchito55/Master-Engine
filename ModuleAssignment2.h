@@ -137,6 +137,8 @@ private:
 	D3D12_TEXTURE_ADDRESS_MODE imGuiAddressingToDX12(unsigned int imGuiIndex);
 	GameObject* createGameObjectFromGLTF(unsigned int meshIndex, unsigned int primitiveIndex);
 
+	void handleEditTransform(float* viewMatrix, float* projectionMatrix, float* modelMatrix);
+
 	void log(const char* t);
 
 	std::vector<std::string> consoleLog;

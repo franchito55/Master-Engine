@@ -11,6 +11,7 @@
 #include "ModuleCameraEditor.h"
 #include "Utils.h"
 #include "Material.h"
+#include "ImGuizmo.h"
 
 ModuleAssignment2::ModuleAssignment2(HWND _hWnd) : hWnd(_hWnd) {}
 
@@ -25,51 +26,6 @@ bool ModuleAssignment2::init() {
 	// The duck is HUGE for some reason (hundreds of units big)
 	gameObject->getTransform()->scale = Vector3(0.01f, 0.01f, 0.01f);
 
-	unsigned int vertsInTopLeftQuadrant = 0;
-	unsigned int vertsInTopRightQuadrant = 0;
-	unsigned int vertsInBottomLeftQuadrant = 0;
-	unsigned int vertsInBottomRightQuadrant = 0;
-	unsigned int vertsOutsideOf01 = 0;
-	for (unsigned int i = 0; i < gameObject->getMesh()->getNumVertices(); i++) {
-		Mesh mesh = *gameObject->getMesh();
-		char buffer[500];
-		Vertex currentVertex = mesh.getVertices()[i];
-		snprintf(buffer, sizeof(buffer), "Vertex %d:\n - Position: (%f, %f, %f)\n - Normal: (%f, %f, %f)\n - TexCoord: (%f, %f)\n", i, 
-			currentVertex.position.x, currentVertex.position.y, currentVertex.position.z,
-			currentVertex.normal.x, currentVertex.normal.y, currentVertex.normal.z,
-			currentVertex.texCoord.x, currentVertex.texCoord.y);
-		log(buffer);
-		
-		if (currentVertex.texCoord.x < 0.5 && currentVertex.texCoord.y < 0.5)
-			vertsInTopLeftQuadrant++;
-		else if (currentVertex.texCoord.x > 0.614 && currentVertex.texCoord.y < 0.465)
-			vertsInTopRightQuadrant++;
-		else if (currentVertex.texCoord.x < 0.5 && currentVertex.texCoord.y > 0.5)
-			vertsInBottomLeftQuadrant++;
-		else if (currentVertex.texCoord.x > 0.5 && currentVertex.texCoord.y > 0.5)
-			vertsInBottomRightQuadrant++;
-
-		else if (currentVertex.texCoord.x < 0 || currentVertex.texCoord.y > 1 || currentVertex.texCoord.y < 0 || currentVertex.texCoord.y > 1)
-			vertsOutsideOf01++;
-	}
-	char buffer[500];
-	snprintf(buffer, sizeof(buffer), "Vertices in top left quadrant: %d", vertsInTopLeftQuadrant);
-	log(buffer);
-	snprintf(buffer, sizeof(buffer), "Vertices in top right quadrant: %d", vertsInTopRightQuadrant);
-	log(buffer);
-	snprintf(buffer, sizeof(buffer), "Vertices in bottom left quadrant: %d", vertsInBottomLeftQuadrant);
-	log(buffer);
-	snprintf(buffer, sizeof(buffer), "Vertices in bottom right quadrant: %d", vertsInBottomRightQuadrant);
-	log(buffer);
-	snprintf(buffer, sizeof(buffer), "Vertices outside of [0, 1]: %d", vertsOutsideOf01);
-	log(buffer);
-
-	/*for (unsigned int i = 0; i < gameObject->getMesh()->getNumIndices(); i+=3) {
-		Mesh mesh = *gameObject->getMesh();
-		char buffer[500];
-		snprintf(buffer, sizeof(buffer), "Triangle %d: %d, %d, %d,\n", i, mesh.getIndices()[i], mesh.getIndices()[i+1], mesh.getIndices()[i+2]);
-		log(buffer);
-	}*/
 
 	initConstantBufferViews(device);
 
@@ -95,6 +51,9 @@ bool ModuleAssignment2::init() {
 	app->getModuleD3D12()->getCopyCommandQueue()->Signal(app->getModuleD3D12()->getFence().Get(), 500);
 	app->getModuleD3D12()->WaitForFence(500);
 
+
+	model = Matrix::CreateScale(gameObject->getTransform()->scale) * Matrix::CreateTranslation(gameObject->getTransform()->position);
+
 	return true;
 }
 
@@ -119,8 +78,6 @@ void ModuleAssignment2::preRender() {
 }
 
 void ModuleAssignment2::render() {
-
-	model = Matrix::CreateScale(gameObject->getTransform()->scale) * Matrix::CreateTranslation(gameObject->getTransform()->position);
 	mvp = (model * app->getModuleCamera()->GetViewMatrix() * app->getModuleCamera()->GetProjectionMatrix()).Transpose();
 
 	ComPtr<ID3D12GraphicsCommandList> commandList = app->getModuleD3D12()->getCurrentBufferCommandList();
@@ -200,8 +157,10 @@ void ModuleAssignment2::render() {
 
 	// Quad info window
 	ImGui::Begin("Geometry");
-	ImGui::DragFloat3("Position", &gameObject->getTransform()->position.x, 0.1f, -100.0f, 100.0f);
-	ImGui::DragFloat3("Scale", &gameObject->getTransform()->scale.x, 0.001f, -100.0f, 100.0f);
+	Matrix cameraViewMatrix = app->getModuleCamera()->GetViewMatrix();
+	Matrix cameraProjMatrix = app->getModuleCamera()->GetProjectionMatrix();
+	ImGuizmo::BeginFrame();
+	handleEditTransform(&cameraViewMatrix._11, &cameraProjMatrix._11, &model._11);
 	ImGui::End();
 
 	ImGui::Begin("Debug Info");
@@ -256,7 +215,6 @@ void ModuleAssignment2::render() {
 		ImGui::SetScrollHereY(1.0f);
 		scrollConsoleToBottom = false;
 	}
-
 	ImGui::EndChild();
 	ImGui::End();
 
@@ -444,4 +402,42 @@ void ModuleAssignment2::initConstantBufferViews(ComPtr<ID3D12Device> device) {
 
 void ModuleAssignment2::log(const char* t) {
 	consoleLog.emplace_back(t);
+}
+
+void ModuleAssignment2::handleEditTransform(float* cameraView, float* cameraProjection, float* matrix)
+{
+	static ImGuizmo::OPERATION mCurrentGizmoOperation(ImGuizmo::ROTATE);
+	static ImGuizmo::MODE mCurrentGizmoMode(ImGuizmo::WORLD);
+	if (ImGui::IsKeyPressed(ImGuiKey_T))
+		mCurrentGizmoOperation = ImGuizmo::TRANSLATE;
+	if (ImGui::IsKeyPressed(ImGuiKey_E))
+		mCurrentGizmoOperation = ImGuizmo::ROTATE;
+	if (ImGui::IsKeyPressed(ImGuiKey_R))
+		mCurrentGizmoOperation = ImGuizmo::SCALE;
+	if (ImGui::RadioButton("Translate", mCurrentGizmoOperation == ImGuizmo::TRANSLATE))
+		mCurrentGizmoOperation = ImGuizmo::TRANSLATE;
+	ImGui::SameLine();
+	if (ImGui::RadioButton("Rotate", mCurrentGizmoOperation == ImGuizmo::ROTATE))
+		mCurrentGizmoOperation = ImGuizmo::ROTATE;
+	ImGui::SameLine();
+	if (ImGui::RadioButton("Scale", mCurrentGizmoOperation == ImGuizmo::SCALE))
+		mCurrentGizmoOperation = ImGuizmo::SCALE;
+	float matrixTranslation[3], matrixRotation[3], matrixScale[3];
+	ImGuizmo::DecomposeMatrixToComponents(matrix, matrixTranslation, matrixRotation, matrixScale);
+	ImGui::DragFloat3("Tr", matrixTranslation);
+	ImGui::DragFloat3("Rt", matrixRotation);
+	ImGui::DragFloat3("Sc", matrixScale);
+	ImGuizmo::RecomposeMatrixFromComponents(matrixTranslation, matrixRotation, matrixScale, matrix);
+
+	if (mCurrentGizmoOperation != ImGuizmo::SCALE)
+	{
+		if (ImGui::RadioButton("Local", mCurrentGizmoMode == ImGuizmo::LOCAL))
+			mCurrentGizmoMode = ImGuizmo::LOCAL;
+		ImGui::SameLine();
+		if (ImGui::RadioButton("World", mCurrentGizmoMode == ImGuizmo::WORLD))
+			mCurrentGizmoMode = ImGuizmo::WORLD;
+	}
+	ImGuiIO& io = ImGui::GetIO();
+	ImGuizmo::SetRect(0, 0, io.DisplaySize.x, io.DisplaySize.y);
+	ImGuizmo::Manipulate(cameraView, cameraProjection, mCurrentGizmoOperation, mCurrentGizmoMode, matrix, NULL, NULL);
 }
