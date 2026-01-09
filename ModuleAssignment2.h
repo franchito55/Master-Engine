@@ -32,7 +32,7 @@ struct CameraCB
 
 struct MaterialCB
 {
-	Vector3 materialRf0;
+	Vector3 materialFresnel0;
 	float _padding;
 	Vector3 materialDiffuse;
 	float _padding2;
@@ -60,10 +60,18 @@ public:
 	void createIndexBufferView(D3D12_INDEX_BUFFER_VIEW* _iBV, GameObject& gO);
 	Vector3* getObjectPosition() { return &gameObject->getTransform()->position; }
 
-	int* getCurrentTextureFilteringMode() { return &currentTextureFiltering; } // Return * for ImGui
+	Matrix* getModelMatrix() { return &model; } // Return * for ImGui editing
+
+	int* getCurrentTextureFilteringMode() { return &currentTextureFiltering; } // Return * for ImGui editing
 	void setTextureFilteringChanged(bool _textureFilteringChanged) { textureFilteringChanged = _textureFilteringChanged; }
-	int* getCurrentTextureAddressingMode() { return &currentTextureAddressingMode; } // Return * for ImGui
+	int* getCurrentTextureAddressingMode() { return &currentTextureAddressingMode; } // Return * for ImGui editing
 	void setTextureAddressingChanged(bool _textureAddressingChanged) { textureAddressingChanged = _textureAddressingChanged; }
+
+	Vector3* getLightPosition() { return &pbrLightPosition; }
+	Vector3* getLightColor() { return &pbrLightColor; }
+	Vector3* getMaterialDiffuse() { return &pbrLightColor; }
+	Vector3* getMaterialFresnel0() { return &pbrLightColor; }
+	float* getMaterialN() { return &pbrMaterialN; }
 
 private:
 	HWND hWnd;
@@ -120,13 +128,9 @@ private:
 	Vector3 pbrLightColor = Vector3(1.0f, 1.0f, 1.0f);
 
 	Vector3 pbrMaterialDiffuse = Vector3(1.0f, 1.0f, 1.0f);
-	Vector3 pbrMaterialRf0 = Vector3(0.015f, 0.015f, 0.015f);
+	Vector3 pbrMaterialFresnel0 = Vector3(0.015f, 0.015f, 0.015f);
 	float pbrMaterialN = 64.0f;
 
-
-	bool showAxisTriad = true;
-	bool showXZGrid = true;
-	bool showCameraTarget = true;
 
 	int currentTextureFiltering = 0;
 	int currentTextureAddressingMode = 0;
@@ -141,8 +145,6 @@ private:
 	D3D12_FILTER imGuiFilteringToDX12(unsigned int imGuiIndex);
 	D3D12_TEXTURE_ADDRESS_MODE imGuiAddressingToDX12(unsigned int imGuiIndex);
 	GameObject* createGameObjectFromGLTF(unsigned int meshIndex, unsigned int primitiveIndex);
-
-	void handleEditTransform(float* viewMatrix, float* projectionMatrix, float* modelMatrix);
 
 	void log(const char* t);
 

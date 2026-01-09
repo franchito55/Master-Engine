@@ -30,8 +30,16 @@ private:
 	unsigned int minFps = 99999;
 	unsigned int maxFps = 0;
 
+	// Show/Don't show debugging gizmos
+	bool showXZGrid = true;
+	bool showAxisTriad = true;
+	bool showCameraTarget = false;
+
 	void showFpsInfoWindow();
 	void showTextureInfoWindow();
 	void showGeometryInfoWindow();
 	void showLightingInfoWindow();
+	void showDebugGizmosWindow();
+
+	void handleEditTransform(float* viewMatrix, float* projectionMatrix, float* modelMatrix);
 };
