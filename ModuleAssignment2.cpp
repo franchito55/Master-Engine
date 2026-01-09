@@ -139,22 +139,6 @@ void ModuleAssignment2::render() {
 	commandList->DrawIndexedInstanced(gameObject->getMesh()->getNumIndices(), 1, 0, 0, 0);
 
 
-	ImGui::Begin("Texture info");
-
-	int prevFilteringMode = currentTextureFiltering;
-	const char* filteringModes[] = { "LINEAR", "POINT" };
-	ImGui::Combo("Filtering mode", &currentTextureFiltering, filteringModes, IM_ARRAYSIZE(filteringModes));
-	if (currentTextureFiltering != prevFilteringMode) // Set this flag to change texture filtering mode next frame
-		textureFilteringChanged = true;
-
-	int prevAddressingMode = currentTextureAddressingMode;
-	const char* addressingModes[] = { "WRAP", "CLAMP" };
-	ImGui::Combo("Addressing mode", &currentTextureAddressingMode, addressingModes, IM_ARRAYSIZE(addressingModes));
-	if (currentTextureAddressingMode != prevAddressingMode) // Set this flag to change texture addressing mode next frame
-		textureAddressingChanged = true;
-
-	ImGui::End();
-
 	// Quad info window
 	ImGui::Begin("Geometry");
 	Matrix cameraViewMatrix = app->getModuleCamera()->GetViewMatrix();

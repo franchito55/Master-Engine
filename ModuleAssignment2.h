@@ -60,6 +60,11 @@ public:
 	void createIndexBufferView(D3D12_INDEX_BUFFER_VIEW* _iBV, GameObject& gO);
 	Vector3* getObjectPosition() { return &gameObject->getTransform()->position; }
 
+	int* getCurrentTextureFilteringMode() { return &currentTextureFiltering; } // Return * for ImGui
+	void setTextureFilteringChanged(bool _textureFilteringChanged) { textureFilteringChanged = _textureFilteringChanged; }
+	int* getCurrentTextureAddressingMode() { return &currentTextureAddressingMode; } // Return * for ImGui
+	void setTextureAddressingChanged(bool _textureAddressingChanged) { textureAddressingChanged = _textureAddressingChanged; }
+
 private:
 	HWND hWnd;
 	ComPtr<ID3D12PipelineState> pso = nullptr;

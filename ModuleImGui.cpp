@@ -3,12 +3,14 @@
 #include "ImGuiPass.h"
 #include "Application.h"
 #include "ModuleD3D12.h"
+#include "ModuleAssignment2.h"
 
 extern Application* app;
 
 bool ModuleImGui::init() {
-	// ============ Init ImGui wrapper ============
 	moduleD3D12 = app->getModuleD3D12();
+
+	// ============ Init ImGui wrapper ============
 	imGuiPass = new ImGuiPass(moduleD3D12->getDevice().Get(), hWnd, {0}, {0});
 
 	return true;
@@ -22,6 +24,7 @@ void ModuleImGui::preRender() {
 void ModuleImGui::render() {
 	
 	showFpsInfoWindow();
+	showTextureInfoWindow();
 
 	fpsCount++;
 
@@ -58,5 +61,26 @@ void ModuleImGui::showFpsInfoWindow() {
 	snprintf(overlay, 32, "avg: %d min: %d max: %d", averageFps, minFps, maxFps);
 	ImGui::PlotLines("Frame times", frameTimes, IM_ARRAYSIZE(frameTimes), 0, (std::to_string((int)frameTimes[index]) + " ms").c_str(), 0.0f, 32.0f, ImVec2(0, 80.0f));
 	ImGui::PlotLines("FPS", fps, IM_ARRAYSIZE(fps), 0, overlay, 0.0f, 360.0f, ImVec2(0, 80.0f));
+	ImGui::End();
+}
+
+void ModuleImGui::showTextureInfoWindow() {
+	// ============ Texture info window ============
+	ImGui::Begin("Texture info");
+
+	int prevFilteringMode = *app->getModuleAssignment2()->getCurrentTextureFilteringMode();
+	const char* filteringModes[] = { "LINEAR", "POINT" };
+	int* currentTextureFiltering = app->getModuleAssignment2()->getCurrentTextureFilteringMode();
+	ImGui::Combo("Filtering mode", currentTextureFiltering, filteringModes, IM_ARRAYSIZE(filteringModes));
+	if (*currentTextureFiltering != prevFilteringMode) // Set this flag to change texture filtering mode next frame
+		app->getModuleAssignment2()->setTextureFilteringChanged(true);
+
+	int prevAddressingMode = *app->getModuleAssignment2()->getCurrentTextureAddressingMode();
+	const char* addressingModes[] = { "WRAP", "CLAMP" };
+	int* currentTextureAddressingMode = app->getModuleAssignment2()->getCurrentTextureFilteringMode();
+	ImGui::Combo("Addressing mode", currentTextureAddressingMode, addressingModes, IM_ARRAYSIZE(addressingModes));
+	if (*currentTextureAddressingMode != prevAddressingMode) // Set this flag to change texture addressing mode next frame
+		app->getModuleAssignment2()->setTextureAddressingChanged(true);
+
 	ImGui::End();
 }

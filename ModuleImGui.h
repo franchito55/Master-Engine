@@ -31,4 +31,7 @@ private:
 	unsigned int maxFps = 0;
 
 	void showFpsInfoWindow();
+	void showTextureInfoWindow();
+	void showGeometryInfoWindow();
+	void showLightingInfoWindow();
 };
