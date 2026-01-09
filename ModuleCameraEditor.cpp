@@ -12,18 +12,22 @@
 #define MAX_ORBITING_DISTANCE 30.0f
 #define MIN_ORBITING_DISTANCE 0.3f
 
-ModuleCameraEditor::ModuleCameraEditor(HWND hWnd) {
-	transform.position = Vector3(1.0f, 1.5f, 3.0f);
+ModuleCameraEditor::ModuleCameraEditor(HWND hWnd) {}
+
+bool ModuleCameraEditor::init() {
+	app->setModuleCamera(this); transform.position = Vector3(1.0f, 1.5f, 3.0f);
 	transform.rotation = Quaternion::Identity;
 	transform.forward = target - transform.position;
 	transform.forward.Normalize();
 	transform.up = Vector3(0.0f, 1.0f, 0.0f);
 	recalculateRight();
-}
-
-bool ModuleCameraEditor::init() {
-	app->setModuleCamera(this);
 	currentOrbitingDistance = (target - transform.position).Length();
+
+	imGuiPos = transform.position;
+	imGuiForward = transform.forward;
+	imGuiUp = transform.up;
+	imGuiTarget = target;
+	imGuiOrbitingDistance = currentOrbitingDistance;
 
 	return true;
 }
@@ -154,39 +158,6 @@ void ModuleCameraEditor::update() {
 
 void ModuleCameraEditor::render() {
 
-	Vector3 imGuiPos = transform.position;
-	Vector3 imGuiForward = transform.forward;
-	Vector3 imGuiUp = transform.up;
-	Vector3 imGuiTarget = target;
-	float imGuiOrbitingDist = currentOrbitingDistance;
-
-	ImGui::Begin("Camera");
-	if (ImGui::CollapsingHeader("Vectors")) {
-		ImGui::DragFloat3("Position", &imGuiPos.x, 0.1f, -20.0f, 20.0f);
-		ImGui::DragFloat3("Forward", &imGuiForward.x, 0.1f, -20.0f, 20.0f);
-		ImGui::DragFloat3("Up", &imGuiUp.x, 0.1f, -20.0f, 20.0f);
-		ImGui::DragFloat3("Target", &imGuiTarget.x, 0.1f, -20.0f, 20.0f);
-		ImGui::DragFloat("Distance", &imGuiOrbitingDist, 0.1f, MIN_ORBITING_DISTANCE, MAX_ORBITING_DISTANCE);
-	}
-	if (ImGui::CollapsingHeader("Parameters")) {
-		ImGui::DragFloat("FOV", &fov, 1.0f, 5.0f, 120.0f);
-		ImGui::DragFloat("Move speed", &moveSpeed, 1.0f, 5.0f, 100.0f);
-		ImGui::DragFloat("Rotation speed", &rotationSpeed, 0.1f, 1.0f, 20.0f);
-		ImGui::DragFloat("Zoom speed", &zoomSpeed, 0.1f, 1.0f, 20.0f);
-	}
-	ImGui::End();
-	
-	if (imGuiPos != transform.position)
-		posUpdatedViaImGui = true;
-	if (imGuiForward != transform.forward)
-		forwardUpdatedViaImGui = true;
-	if (imGuiUp != transform.up)
-		upUpdatedViaImGui = true;
-	if (imGuiTarget != target)
-		targetUpdatedViaImGui = true;
-	if (imGuiOrbitingDist != currentOrbitingDistance)
-		orbitingDistanceUpdatedViaImGui = true;
-
 	// Recalculate target in case the user has changed the camera's values via ImGui
 	if (posUpdatedViaImGui || forwardUpdatedViaImGui || upUpdatedViaImGui) {
 		imGuiForward.Normalize();
@@ -213,14 +184,7 @@ void ModuleCameraEditor::render() {
 		targetUpdatedViaImGui = false;
 	}
 	else if (orbitingDistanceUpdatedViaImGui) {
-		transform.forward = imGuiTarget - imGuiPos;
-		transform.forward.Normalize();
-		transform.right = transform.forward.Cross(Vector3(0.0f, 1.0f, 0.0f));
-		transform.right.Normalize();
-		transform.up = transform.right.Cross(transform.forward);
-		transform.up.Normalize();
-		target = imGuiTarget;
-		currentOrbitingDistance = imGuiOrbitingDist;
+		currentOrbitingDistance = imGuiOrbitingDistance;
 		Vector3 nudge = transform.position - target;
 		nudge.Normalize();
 		transform.position = target + nudge * currentOrbitingDistance;

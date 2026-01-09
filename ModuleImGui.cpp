@@ -7,10 +7,14 @@
 #include "ModuleCameraEditor.h"
 #include "ImGuizmo.h"
 
+#define MAX_ORBITING_DISTANCE 30.0f
+#define MIN_ORBITING_DISTANCE 0.3f
+
 extern Application* app;
 
 bool ModuleImGui::init() {
 	moduleD3D12 = app->getModuleD3D12();
+	moduleCamera = app->getModuleCamera();
 
 	// ============ Init ImGui wrapper ============
 	imGuiPass = new ImGuiPass(moduleD3D12->getDevice().Get(), hWnd, {0}, {0});
@@ -30,6 +34,7 @@ void ModuleImGui::render() {
 	showGeometryInfoWindow();
 	showDebugGizmosWindow();
 	showConsoleWindow();
+	showCameraInfoWindow();
 
 	fpsCount++;
 
@@ -93,8 +98,8 @@ void ModuleImGui::showTextureInfoWindow() {
 void ModuleImGui::showGeometryInfoWindow() {
 	// ============ Geometry info window ============
 	ImGui::Begin("Geometry");
-	Matrix cameraViewMatrix = app->getModuleCamera()->GetViewMatrix();
-	Matrix cameraProjMatrix = app->getModuleCamera()->GetProjectionMatrix();
+	Matrix cameraViewMatrix = moduleCamera->GetViewMatrix();
+	Matrix cameraProjMatrix = moduleCamera->GetProjectionMatrix();
 	Matrix* model = app->getModuleAssignment2()->getModelMatrix();
 	ImGuizmo::BeginFrame();
 	handleEditTransform(&cameraViewMatrix._11, &cameraProjMatrix._11, &model->_11);
@@ -165,14 +170,14 @@ void ModuleImGui::showDebugGizmosWindow() {
 		dd::xzSquareGrid(-20.0f, 20.0f, 0.0f, 1.0f, dd::colors::LightGray);
 	if (showAxisTriad) {
 		// To avoid z-fighting between axis and grid. Axis lines always drawn on top
-		Vector3 nudge = app->getModuleCamera()->GetTransform().position;
+		Vector3 nudge = moduleCamera->GetTransform().position;
 		nudge.Normalize();
 		Matrix axisPos = Matrix::CreateTranslation(nudge * 0.001f);
 		dd::axisTriad(ddConvert(axisPos), 0.05f, 0.5f);
 	}
 	if (showCameraTarget) {
 		float cameraTargetColor[3] = { 1.0f, 0.0f, 0.0f };
-		Vector3 cameraTarget = app->getModuleCamera()->getTarget();
+		Vector3 cameraTarget = moduleCamera->getTarget();
 		dd::sphere(&cameraTarget.x, cameraTargetColor, 0.025f);
 	}
 }
@@ -205,4 +210,56 @@ void ModuleImGui::showConsoleWindow() {
 	}
 	ImGui::EndChild();
 	ImGui::End();
+}
+
+void ModuleImGui::showCameraInfoWindow() {
+	Vector3 cameraPos = moduleCamera->GetTransform().position;
+	Vector3 cameraForward = moduleCamera->GetTransform().forward;
+	Vector3 cameraUp = moduleCamera->GetTransform().up;
+	Vector3 cameraTarget = moduleCamera->getTarget();
+	float cameraOrbitingDist = moduleCamera->getCurrentOrbitingDistance();
+
+	Vector3 newPos = cameraPos;
+	Vector3 newForward = cameraForward;
+	Vector3 newUp = cameraUp;
+	Vector3 newTarget = cameraTarget;
+	float newOrbitingDist = cameraOrbitingDist;
+
+	ImGui::Begin("Camera");
+	if (ImGui::CollapsingHeader("Vectors")) {
+		ImGui::DragFloat3("Position", &newPos.x, 0.1f, -20.0f, 20.0f);
+		ImGui::DragFloat3("Forward", &newForward.x, 0.1f, -20.0f, 20.0f);
+		ImGui::DragFloat3("Up", &newUp.x, 0.1f, -20.0f, 20.0f);
+		ImGui::DragFloat3("Target", &newTarget.x, 0.1f, -20.0f, 20.0f);
+		ImGui::DragFloat("Distance", &newOrbitingDist, 0.1f, MIN_ORBITING_DISTANCE, MAX_ORBITING_DISTANCE);
+	}
+	if (ImGui::CollapsingHeader("Parameters")) {
+		ImGui::DragFloat("FOV", moduleCamera->getFov(), 1.0f, 5.0f, 120.0f);
+		ImGui::DragFloat("Move speed", moduleCamera->getMoveSpeed(), 1.0f, 5.0f, 100.0f);
+		ImGui::DragFloat("Rotation speed", moduleCamera->getRotationSpeed(), 0.1f, 1.0f, 20.0f);
+		ImGui::DragFloat("Zoom speed", moduleCamera->getZoomSpeed(), 0.1f, 1.0f, 20.0f);
+	}
+	ImGui::End();
+
+	// Check if edited via ImGui and set a flag in ModuleCameraEditor
+	if (newPos != cameraPos) {
+		moduleCamera->setPosUpdatedViaImGui(true);
+		moduleCamera->setImGuiPos(newPos);
+	}
+	if (newForward != cameraForward) {
+		moduleCamera->setForwardUpdatedViaImGui(true);
+		moduleCamera->setImGuiForward(newForward);
+	}
+	if (newUp != cameraUp) {
+		moduleCamera->setUpUpdatedViaImGui(true);
+		moduleCamera->setImGuiUp(newUp);
+	}
+	if (newTarget != cameraTarget) {
+		moduleCamera->setTargetUpdatedViaImGui(true);
+		moduleCamera->setImGuiTarget(newTarget);
+	}
+	if (newOrbitingDist != cameraOrbitingDist) {
+		moduleCamera->setOrbitingDistanceUpdatedViaImGui(true);
+		moduleCamera->setImGuiOrbitingDistance(newOrbitingDist);
+	}
 }

@@ -6,6 +6,7 @@
 
 class ImGuiPass;
 class ModuleD3D12;
+class ModuleCameraEditor;
 
 class ModuleImGui : public Module {
 public:
@@ -24,6 +25,7 @@ public:
 private:
 	HWND hWnd;
 	ModuleD3D12* moduleD3D12 = nullptr;
+	ModuleCameraEditor* moduleCamera = nullptr;
 	ImGuiPass* imGuiPass = nullptr;
 
 	// FPS info window
@@ -49,6 +51,7 @@ private:
 	void showLightingInfoWindow();
 	void showDebugGizmosWindow();
 	void showConsoleWindow();
+	void showCameraInfoWindow();
 
 	void handleEditTransform(float* viewMatrix, float* projectionMatrix, float* modelMatrix);
 };

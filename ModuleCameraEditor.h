@@ -12,6 +12,11 @@ public:
 	Matrix GetViewMatrix() const { return view; }
 	Matrix GetProjectionMatrix() const { return projection; }
 	Vector3 getTarget() const { return target; }
+	float getCurrentOrbitingDistance() { return currentOrbitingDistance; }
+	float* getFov() { return &fov; }
+	float* getMoveSpeed() { return &moveSpeed; }
+	float* getRotationSpeed() { return &rotationSpeed; }
+	float* getZoomSpeed() { return &zoomSpeed; }
 
 	bool init() override;
 	void update() override;
@@ -24,6 +29,17 @@ public:
 	void setForwardUpdatedViaImGui(const bool updated) { forwardUpdatedViaImGui = updated; }
 	void setUpUpdatedViaImGui(const bool updated) { upUpdatedViaImGui = updated; }
 	void setTargetUpdatedViaImGui(const bool updated) { targetUpdatedViaImGui = updated; }
+	void setOrbitingDistanceUpdatedViaImGui(const bool updated) { orbitingDistanceUpdatedViaImGui = updated; }
+	Vector3* getImGuiPos() { return &imGuiPos; }
+	void setImGuiPos(Vector3 _imGuiPos) { imGuiPos = _imGuiPos; }
+	Vector3* getImGuiForward() { return &imGuiForward; }
+	void setImGuiForward(Vector3 _imGuiForward) { imGuiForward = _imGuiForward; }
+	Vector3* getImGuiUp() { return &imGuiUp; }
+	void setImGuiUp(Vector3 _imGuiUp) { imGuiUp = _imGuiUp; }
+	Vector3* getImGuiTarget() { return &imGuiTarget; }
+	void setImGuiTarget(Vector3 _imGuiTarget) { imGuiTarget = _imGuiTarget; }
+	float* getImGuiOrbitingDistance() { return &imGuiOrbitingDistance; }
+	void setImGuiOrbitingDistance(float _imGuiOrbitingDistance) { imGuiOrbitingDistance = _imGuiOrbitingDistance; }
 
 private:
 	Transform transform = {};
@@ -59,6 +75,13 @@ private:
 	bool upUpdatedViaImGui = false;
 	bool targetUpdatedViaImGui = false;
 	bool orbitingDistanceUpdatedViaImGui = false;
+
+	// Need to keep duplicates of data to handle bidirectional editing via ImGui
+	Vector3 imGuiPos;
+	Vector3 imGuiForward;
+	Vector3 imGuiUp;
+	Vector3 imGuiTarget;
+	float imGuiOrbitingDistance = 0.0f;
 
 	bool anySignsDiffer(Vector3 target, Vector3 position);
 };
