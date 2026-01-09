@@ -145,9 +145,4 @@ private:
 	D3D12_FILTER imGuiFilteringToDX12(unsigned int imGuiIndex);
 	D3D12_TEXTURE_ADDRESS_MODE imGuiAddressingToDX12(unsigned int imGuiIndex);
 	GameObject* createGameObjectFromGLTF(unsigned int meshIndex, unsigned int primitiveIndex);
-
-	void log(const char* t);
-
-	std::vector<std::string> consoleLog;
-	bool scrollConsoleToBottom = true;
 };

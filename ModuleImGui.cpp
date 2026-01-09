@@ -29,6 +29,7 @@ void ModuleImGui::render() {
 	showTextureInfoWindow();
 	showGeometryInfoWindow();
 	showDebugGizmosWindow();
+	showConsoleWindow();
 
 	fpsCount++;
 
@@ -174,4 +175,34 @@ void ModuleImGui::showDebugGizmosWindow() {
 		Vector3 cameraTarget = app->getModuleCamera()->getTarget();
 		dd::sphere(&cameraTarget.x, cameraTargetColor, 0.025f);
 	}
+}
+
+void ModuleImGui::log(const char* t) {
+	consoleLog.emplace_back(t);
+}
+
+void ModuleImGui::showConsoleWindow() {
+	// ============ Output console window ============
+	ImGui::Begin("Console");
+	if (ImGui::Button("Clear")) {
+		consoleLog.clear();
+	}
+	ImGui::SameLine();
+	if (ImGui::Button("Copy")) {
+		ImGui::LogToClipboard();
+		for (const auto& line : consoleLog) ImGui::TextUnformatted(line.c_str());
+		ImGui::LogFinish();
+	}
+	ImGui::Separator();
+	ImGui::BeginChild("Log", ImVec2(0, 0), true, ImGuiWindowFlags_HorizontalScrollbar);
+	for (const auto& line : consoleLog) {
+		ImGui::TextUnformatted(line.c_str());
+	}
+
+	if (scrollConsoleToBottom) {
+		ImGui::SetScrollHereY(1.0f);
+		scrollConsoleToBottom = false;
+	}
+	ImGui::EndChild();
+	ImGui::End();
 }

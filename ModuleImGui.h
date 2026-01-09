@@ -18,12 +18,15 @@ public:
 	void render() override;
 	//void postRender() override;
 
+	// Log to ImGui console
+	void log(const char* t);
 
 private:
 	HWND hWnd;
 	ModuleD3D12* moduleD3D12 = nullptr;
 	ImGuiPass* imGuiPass = nullptr;
 
+	// FPS info window
 	unsigned int fpsCount = 0;
 	float frameTimes[FPS_PLOTTING_MAX] = {};
 	float fps[FPS_PLOTTING_MAX] = {};
@@ -35,11 +38,17 @@ private:
 	bool showAxisTriad = true;
 	bool showCameraTarget = false;
 
+	// Console
+	std::vector<std::string> consoleLog;
+	bool scrollConsoleToBottom = true;
+
+
 	void showFpsInfoWindow();
 	void showTextureInfoWindow();
 	void showGeometryInfoWindow();
 	void showLightingInfoWindow();
 	void showDebugGizmosWindow();
+	void showConsoleWindow();
 
 	void handleEditTransform(float* viewMatrix, float* projectionMatrix, float* modelMatrix);
 };

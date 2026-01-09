@@ -138,32 +138,7 @@ void ModuleAssignment2::render() {
 
 	commandList->DrawIndexedInstanced(gameObject->getMesh()->getNumIndices(), 1, 0, 0, 0);
 
-
-
-	// Output console
-	ImGui::Begin("Console");
-	if (ImGui::Button("Clear")) {
-		consoleLog.clear();
-	}
-	ImGui::SameLine();
-	if (ImGui::Button("Copy")) {
-		ImGui::LogToClipboard();
-		for (const auto& line : consoleLog) ImGui::TextUnformatted(line.c_str());
-		ImGui::LogFinish();
-	}
-	ImGui::Separator();
-	ImGui::BeginChild("Log", ImVec2(0, 0), true, ImGuiWindowFlags_HorizontalScrollbar);
-	for (const auto& line : consoleLog) {
-		ImGui::TextUnformatted(line.c_str());
-	}
-
-	if (scrollConsoleToBottom) {
-		ImGui::SetScrollHereY(1.0f);
-		scrollConsoleToBottom = false;
-	}
-	ImGui::EndChild();
-	ImGui::End();
-
+	// Draw debug info last so it's on top
 	debugDrawPass->record(commandList.Get(), app->getWindowWidth(), app->getWindowHeight(), app->getModuleCamera()->GetViewMatrix(), app->getModuleCamera()->GetProjectionMatrix());
 }
 
@@ -344,8 +319,4 @@ void ModuleAssignment2::initConstantBufferViews(ComPtr<ID3D12Device> device) {
 	// Create and map once MvpCB
 	app->getModuleBuffer()->createUploadBuffer(materialCB, sizeof(MaterialCB));
 	materialCB->Map(0, nullptr, reinterpret_cast<void**>(&materialData));
-}
-
-void ModuleAssignment2::log(const char* t) {
-	consoleLog.emplace_back(t);
 }
