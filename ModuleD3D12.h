@@ -4,11 +4,7 @@
 #include <chrono>
 #include "Application.h"
 
-class ImGuiPass;
-
 #define FRAME_BUFFER_NUM 3
-#define COLOR_CHANGE_RATE_CYCLE 120
-#define FPS_PLOTTING_MAX 60
 #define SHADER_VISIBLE_DESCRIPTOR_NUMBER 1000
 
 class ModuleD3D12 : public Module {
@@ -31,13 +27,13 @@ public:
 	ComPtr<ID3D12GraphicsCommandList> getCopyCommandList() const { return copyCommandList; }
 	void setResizePending(const RECT &resizedRect);
 	void resizeBuffers();
-	ImGuiPass* getImGuiPass() const { return imGuiPass; }
 	const D3D12_CPU_DESCRIPTOR_HANDLE* getCurrentRtvCpuDescriptorHandle() const { return &rtvDescriptorHandles[currentBackBufferIndex]; }
 	ComPtr<ID3D12Fence> getFence() const { return fence; }
 	ComPtr<ID3D12Resource2> getDepthStencilBuffer() const { return depthStencilBuffer; }
 	const D3D12_CPU_DESCRIPTOR_HANDLE* getDSVCPUDescriptorHandle() const { return &dsvDescriptorHandle; }
 	ComPtr<ID3D12DescriptorHeap> getShaderVisibleDescriptorHeap() const { return shaderVisibleDescriptorHeap; }
 	void WaitForAllFences();
+	long long getDeltaTime() { return deltaTime.count(); }
 
 private:
 	HWND hWnd;
@@ -71,20 +67,13 @@ private:
 	bool resizePending = false;
 	RECT resizedRect = {};
 
-	ImGuiPass* imGuiPass = nullptr;
-
 	float color[3] = { 0.2f, 0.2f, 0.2f };
 
 	unsigned int frameIndex = 0;
 
-	unsigned int fpsCount = 0;
+	unsigned int frameCount = 0;
 	std::chrono::system_clock::duration deltaTime;
 	std::chrono::system_clock::time_point lastFrameTime = std::chrono::time_point_cast<std::chrono::milliseconds>(std::chrono::system_clock::now());
-	float frameTimes[FPS_PLOTTING_MAX] = {};
-	float fps[FPS_PLOTTING_MAX] = {};
-
-	unsigned int minFps = 99999;
-	unsigned int maxFps = 0;
 
 	void enableDebugLayer();
 	ComPtr<IDXGIFactory6> initDevice();

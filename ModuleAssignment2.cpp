@@ -424,9 +424,9 @@ void ModuleAssignment2::handleEditTransform(float* cameraView, float* cameraProj
 		mCurrentGizmoOperation = ImGuizmo::SCALE;
 	float matrixTranslation[3], matrixRotation[3], matrixScale[3];
 	ImGuizmo::DecomposeMatrixToComponents(matrix, matrixTranslation, matrixRotation, matrixScale);
-	ImGui::DragFloat3("Tr", matrixTranslation);
-	ImGui::DragFloat3("Rt", matrixRotation);
-	ImGui::DragFloat3("Sc", matrixScale);
+	ImGui::DragFloat3("Position", matrixTranslation, 0.1f, -100.0f, 100.0f);
+	ImGui::DragFloat3("Rotation", matrixRotation, 0.1f, -100.0f, 100.0f);
+	ImGui::DragFloat3("Scale", matrixScale, 0.1f, -100.0f, 100.0f);
 	ImGuizmo::RecomposeMatrixFromComponents(matrixTranslation, matrixRotation, matrixScale, matrix);
 
 	if (mCurrentGizmoOperation != ImGuizmo::SCALE)

@@ -5,6 +5,7 @@
 #include "ModuleBuffer.h"
 #include "ModuleCameraEditor.h"
 #include "ModuleAssignment2.h"
+#include "ModuleImGui.h"
 
 Application::Application(int argc, wchar_t** argv, void* hWnd)
 {
@@ -17,6 +18,7 @@ Application::Application(int argc, wchar_t** argv, void* hWnd)
     modules.push_back(new ModuleD3D12((HWND)hWnd));
     modules.push_back(new ModuleBuffer((HWND)hWnd));
     modules.push_back(new ModuleAssignment2((HWND)hWnd));
+    modules.push_back(new ModuleImGui((HWND)hWnd)); // ModuleImGui MUST go last
 }
 
 Application::~Application()

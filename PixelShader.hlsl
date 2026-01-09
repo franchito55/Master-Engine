@@ -59,18 +59,17 @@ float4 main(VertexOutput input) : SV_TARGET
     float3 albedo = colourTex.Sample(colourSampler, input.texCoords) * materialDiffuse;
     
     // Diffuse -> reflected color (not specular)
-    float3 diffuse = materialDiffuse * albedo * (1 - maxRGB(materialRf0)) / PI;
+    float3 diffuse = albedo * (1 - maxRGB(materialRf0)) / PI;
     
     // Fresnel -> how much of the reflected light is specular?
     float3 F = FresnelSchlick(VdotH);
     
     // Specular
-    float specular = (materialN + 2) / (2 * PI) * F * pow(NdotH, materialN);
+    float specular = ((materialN + 2) / (2 * PI)) * F * pow(NdotH, materialN);
     
     float3 color =
         (diffuse + specular) // BSDF
-        * lightColor * NdotL
-        + 0.1 * albedo; // ambient
+        * lightColor * NdotL;
     
     return float4(color, 1.0);
 }

@@ -1,6 +1,5 @@
 #include "Globals.h"
 #include "ModuleD3D12.h"
-#include "ImGuiPass.h"
 #include "ModuleBuffer.h"
 
 extern Application* app;
@@ -33,17 +32,12 @@ bool ModuleD3D12::init() {
 	// ============ Init fence event (we'll use the same event for both fences) ============
 	fenceEvent = CreateEventA(nullptr, FALSE, 0, nullptr);
 
-	// ============ Init ImGui wrapper ============
-	imGuiPass = new ImGuiPass(device.Get(), hWnd, {0}, {0});
-
 	initDSB();
 
 	return true;
 }
 
 void ModuleD3D12::preRender() {
-	// preRender de ModuleEditor
-	imGuiPass->startFrame();
 
 	// Get the current back buffer index
 	currentBackBufferIndex = swapChain->GetCurrentBackBufferIndex();
@@ -83,40 +77,6 @@ void ModuleD3D12::render() {
 }
 
 void ModuleD3D12::postRender() {
-	// ImGui stuff in postRender() so it renders AFTER everything else
-	ImGui::Begin("FPS info");
-	// ImGui::LabelText(std::to_string(deltaTime.count()).c_str(), "deltaTime");
-	unsigned int index = fpsCount % FPS_PLOTTING_MAX;
-	frameTimes[index] = deltaTime.count() / 10000.0f;
-	fps[index] = 1000.0f / frameTimes[index];
-
-	if (index == 0) {
-		minFps = 99999;
-		maxFps = 0;
-	}
-	if (fps[index] < minFps)
-		minFps = fps[index];
-	if (fps[index] > maxFps)
-		maxFps = fps[index];
-	unsigned int averageFps = 0;
-	unsigned int numFps = 0;
-	for (unsigned int i = 0; i < FPS_PLOTTING_MAX; i++) {
-		if (fps[i] != 0 && fps[i] != INFINITE) {
-			numFps++;
-			averageFps += fps[i];
-		}
-	}
-	averageFps /= numFps;
-
-	char overlay[32];
-	snprintf(overlay, 32, "avg: %d min: %d max: %d", averageFps, minFps, maxFps);
-	ImGui::PlotLines("Frame times", frameTimes, IM_ARRAYSIZE(frameTimes), 0, (std::to_string((int)frameTimes[index]) + " ms").c_str(), 0.0f, 32.0f, ImVec2(0, 80.0f));
-	ImGui::PlotLines("FPS", fps, IM_ARRAYSIZE(fps), 0, overlay, 0.0f, 360.0f, ImVec2(0, 80.0f));
-	ImGui::End();
-
-	// This HAS to go last so that the UI gets rendered on top
-	imGuiPass->record(renderCommandLists[currentBackBufferIndex].Get(), rtvDescriptorHandles[currentBackBufferIndex]);
-
 	// Transition back to PRESENT
 	barrier = CD3DX12_RESOURCE_BARRIER::Transition(buffers[currentBackBufferIndex].Get(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, D3D12_RESOURCE_BARRIER_FLAG_NONE);
 	renderCommandLists[currentBackBufferIndex]->ResourceBarrier(1, &barrier);
@@ -130,8 +90,7 @@ void ModuleD3D12::postRender() {
 	swapChain->Present(1, 0);
 
 	// This tells the GPU to set the fence's value to what you pass
-	fpsCount++;
-	fenceValues[currentBackBufferIndex] = fpsCount;
+	fenceValues[currentBackBufferIndex] = frameCount++;
 	renderCommandQueue->Signal(fence.Get(), fenceValues[currentBackBufferIndex]);
 }
 
