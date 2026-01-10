@@ -45,6 +45,7 @@ struct LightCB
 	float _pad1; // Padding to 16B
 	Vector3 lightColor;
 	float _pad2; // Padding to 16B
+	float lightIntensity;
 };
 
 class ModuleAssignment2 : public Module {
@@ -69,8 +70,9 @@ public:
 
 	Vector3* getLightPosition() { return &pbrLightPosition; }
 	Vector3* getLightColor() { return &pbrLightColor; }
-	Vector3* getMaterialDiffuse() { return &pbrLightColor; }
-	Vector3* getMaterialFresnel0() { return &pbrLightColor; }
+	float* getLightIntensity() { return &pbrLightIntensity; }
+	Vector3* getMaterialDiffuse() { return &pbrMaterialDiffuse; }
+	Vector3* getMaterialFresnel0() { return &pbrMaterialFresnel0; }
 	float* getMaterialN() { return &pbrMaterialN; }
 
 private:
@@ -126,6 +128,7 @@ private:
 
 	Vector3 pbrLightPosition = Vector3(0.0f, 4.0f, 2.0f);
 	Vector3 pbrLightColor = Vector3(1.0f, 1.0f, 1.0f);
+	float pbrLightIntensity = 3.5f;
 
 	Vector3 pbrMaterialDiffuse = Vector3(1.0f, 1.0f, 1.0f);
 	Vector3 pbrMaterialFresnel0 = Vector3(0.015f, 0.015f, 0.015f);
@@ -138,9 +141,9 @@ private:
 	bool textureFilteringChanged = false;
 	bool textureAddressingChanged = false;
 
-	void buildRootSignature(ComPtr<ID3D12Device> device);
-	void buildPSO(ComPtr<ID3D12Device> device);
-	void initConstantBufferViews(ComPtr<ID3D12Device> device);
+	void buildRootSignature();
+	void buildPSO();
+	void initConstantBufferViews();
 
 	D3D12_FILTER imGuiFilteringToDX12(unsigned int imGuiIndex);
 	D3D12_TEXTURE_ADDRESS_MODE imGuiAddressingToDX12(unsigned int imGuiIndex);

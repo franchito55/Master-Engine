@@ -9,10 +9,12 @@
 class Module;
 class ModuleD3D12;
 class ModuleEditor;
-class ModuleBuffer;
 class ModuleCameraEditor;
 class ModuleInput;
 class ModuleAssignment2;
+class ModuleResources;
+class ModuleShaderDescriptors;
+class ModuleNonShaderDescriptors;
 
 class Application
 {
@@ -41,8 +43,8 @@ public:
     ModuleEditor* getModuleEditor() const { return moduleEditor; }
     void setModuleEditor(ModuleEditor* _moduleEditor) { moduleEditor = _moduleEditor; }
 
-    ModuleBuffer* getModuleBuffer() const { return moduleBuffer; }
-    void setModuleBuffer(ModuleBuffer* _moduleBuffer) { moduleBuffer = _moduleBuffer; }
+    ModuleResources* getModuleResources() const { return moduleResources; }
+    void setModuleResources(ModuleResources* _moduleResources) { moduleResources = _moduleResources; }
 
     ModuleInput* getModuleInput() const { return moduleInput; }
     void setModuleInput(ModuleInput* _moduleInput) { moduleInput = _moduleInput; }
@@ -52,6 +54,12 @@ public:
 
     ModuleAssignment2* getModuleAssignment2() const { return moduleAssignment2; }
     void setModuleAssignment2(ModuleAssignment2* _moduleAssignment2) { moduleAssignment2 = _moduleAssignment2; }
+
+    ModuleShaderDescriptors* getModuleShaderDescriptors() const { return moduleShaderDescriptors; }
+    void setModuleShaderDescriptors(ModuleShaderDescriptors* _moduleShaderDescriptors) { moduleShaderDescriptors = _moduleShaderDescriptors; }
+
+    ModuleNonShaderDescriptors* getModuleNonShaderDescriptors() const { return moduleNonShaderDescriptors; }
+    void setModuleNonShaderDescriptors(ModuleNonShaderDescriptors* _moduleNonShaderDescriptors) { moduleNonShaderDescriptors = _moduleNonShaderDescriptors; }
 
     unsigned int getWindowWidth() const { return windowWidth; }
     void setWindowWidth(const unsigned int _windowWidth) { windowWidth = _windowWidth; }
@@ -71,12 +79,14 @@ private:
     uint64_t  elapsedMilis = 0;
     bool      paused = false;
 
-    ModuleD3D12* moduleD3D12 = nullptr;
-    ModuleEditor* moduleEditor = nullptr;
-    ModuleBuffer* moduleBuffer = nullptr;
-    ModuleInput* moduleInput = nullptr;
-    ModuleCameraEditor* moduleCamera = nullptr;
-    ModuleAssignment2* moduleAssignment2 = nullptr;
+    ModuleD3D12* moduleD3D12;
+    ModuleEditor* moduleEditor;
+    ModuleResources* moduleResources;
+    ModuleInput* moduleInput;
+    ModuleCameraEditor* moduleCamera;
+    ModuleAssignment2* moduleAssignment2;
+    ModuleShaderDescriptors* moduleShaderDescriptors;
+    ModuleNonShaderDescriptors* moduleNonShaderDescriptors;
 
     unsigned int windowWidth;
     unsigned int windowHeight;

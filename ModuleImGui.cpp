@@ -6,6 +6,10 @@
 #include "ModuleAssignment2.h"
 #include "ModuleCameraEditor.h"
 #include "ImGuizmo.h"
+#include "ModuleNonShaderDescriptors.h"
+#include "ModuleInput.h"
+#include "Keyboard.h"
+#include "Mouse.h"
 
 #define MAX_ORBITING_DISTANCE 30.0f
 #define MIN_ORBITING_DISTANCE 0.3f
@@ -35,11 +39,15 @@ void ModuleImGui::render() {
 	showDebugGizmosWindow();
 	showConsoleWindow();
 	showCameraInfoWindow();
+	showLightingInfoWindow();
+	showMaterialInfoWindow();
 
 	fpsCount++;
 
 	// This HAS to go last so that the UI gets rendered on top
-	imGuiPass->record(moduleD3D12->getCurrentBufferCommandList().Get(), *moduleD3D12->getCurrentRtvCpuDescriptorHandle()); // TODO : change when we implement rendering to a texture
+	unsigned int rtvIndexInRTVHeap = app->getModuleD3D12()->getCurrentRTVIndexInRTVHeap();
+	D3D12_CPU_DESCRIPTOR_HANDLE rtvCpuDescriptorHandle = app->getModuleNonShaderDescriptors()->getCPUHandleFromRTVHeap(rtvIndexInRTVHeap);
+	imGuiPass->record(moduleD3D12->getCurrentBufferCommandList().Get(), rtvCpuDescriptorHandle); // TODO : change when we implement rendering to a texture
 }
 
 void ModuleImGui::showFpsInfoWindow() {
@@ -87,7 +95,7 @@ void ModuleImGui::showTextureInfoWindow() {
 
 	int prevAddressingMode = *app->getModuleAssignment2()->getCurrentTextureAddressingMode();
 	const char* addressingModes[] = { "WRAP", "CLAMP" };
-	int* currentTextureAddressingMode = app->getModuleAssignment2()->getCurrentTextureFilteringMode();
+	int* currentTextureAddressingMode = app->getModuleAssignment2()->getCurrentTextureAddressingMode();
 	ImGui::Combo("Addressing mode", currentTextureAddressingMode, addressingModes, IM_ARRAYSIZE(addressingModes));
 	if (*currentTextureAddressingMode != prevAddressingMode) // Set this flag to change texture addressing mode next frame
 		app->getModuleAssignment2()->setTextureAddressingChanged(true);
@@ -101,29 +109,10 @@ void ModuleImGui::showGeometryInfoWindow() {
 	Matrix cameraViewMatrix = moduleCamera->GetViewMatrix();
 	Matrix cameraProjMatrix = moduleCamera->GetProjectionMatrix();
 	Matrix* model = app->getModuleAssignment2()->getModelMatrix();
-	ImGuizmo::BeginFrame();
-	handleEditTransform(&cameraViewMatrix._11, &cameraProjMatrix._11, &model->_11);
-	ImGui::End();
-
-	ImGui::Begin("Debug Info");
-	ImGui::Checkbox("Show XZ plane grid", &showXZGrid);
-	ImGui::Checkbox("Show world origin axis triad", &showAxisTriad);
-	ImGui::Checkbox("Show camera target position", &showCameraTarget);
-	ImGui::End();
-
-	Vector3 pbrLightPosition = Vector3(0.0f, 4.0f, 2.0f);
-	Vector3 pbrLightColor = Vector3(1.0f, 1.0f, 1.0f);
-
-	Vector3 pbrMaterialDiffuse = Vector3(1.0f, 1.0f, 1.0f);
-	Vector3 pbrMaterialRf0 = Vector3(0.015f, 0.015f, 0.015f);
-	float pbrMaterialN = 64.0f;
-
-	ImGui::Begin("Phong");
-	ImGui::DragFloat3("Light position", &pbrLightPosition.x, 0.1f, -5.0f, 5.0f);
-	ImGui::ColorEdit3("Light color", &pbrLightColor.x);
-	ImGui::ColorEdit3("Material diffuse", &pbrMaterialDiffuse.x);
-	ImGui::ColorEdit3("Material Rf0", &pbrMaterialRf0.x, 0.01f);
-	ImGui::DragFloat("Material n", &pbrMaterialN, 0.5f, 1.0f, 1500.0f);
+	if (showGeometryGizmo && !(app->getModuleInput()->GetKeyboard()->GetState().LeftAlt || app->getModuleInput()->GetMouse()->GetState().rightButton)) {
+		ImGuizmo::BeginFrame();
+		handleEditTransform(&cameraViewMatrix._11, &cameraProjMatrix._11, &model->_11);
+	}
 	ImGui::End();
 }
 
@@ -166,6 +155,13 @@ void ModuleImGui::handleEditTransform(float* cameraView, float* cameraProjection
 }
 
 void ModuleImGui::showDebugGizmosWindow() {
+	ImGui::Begin("Debug Info");
+	ImGui::Checkbox("Show XZ plane grid", &showXZGrid);
+	ImGui::Checkbox("Show world origin axis triad", &showAxisTriad);
+	ImGui::Checkbox("Show camera target position", &showCameraTarget);
+	ImGui::Checkbox("Show geometry transform gizmo", &showGeometryGizmo);
+	ImGui::End();
+
 	if (showXZGrid)
 		dd::xzSquareGrid(-20.0f, 20.0f, 0.0f, 1.0f, dd::colors::LightGray);
 	if (showAxisTriad) {
@@ -262,4 +258,28 @@ void ModuleImGui::showCameraInfoWindow() {
 		moduleCamera->setOrbitingDistanceUpdatedViaImGui(true);
 		moduleCamera->setImGuiOrbitingDistance(newOrbitingDist);
 	}
+}
+
+void ModuleImGui::showLightingInfoWindow() {
+	Vector3* pbrLightPosition = app->getModuleAssignment2()->getLightPosition();
+	Vector3* pbrLightColor = app->getModuleAssignment2()->getLightColor();
+	float* pbrLightIntensity = app->getModuleAssignment2()->getLightIntensity();
+
+	ImGui::Begin("Light");
+	ImGui::DragFloat3("Light position", &pbrLightPosition->x, 0.1f, -40.0f, 40.0f);
+	ImGui::ColorEdit3("Light color", &pbrLightColor->x);
+	ImGui::DragFloat("Light intensity", pbrLightIntensity, 0.05f, 0.5f, 5.0f);
+	ImGui::End();
+}
+
+void ModuleImGui::showMaterialInfoWindow() {
+	Vector3* pbrMaterialDiffuse = app->getModuleAssignment2()->getMaterialDiffuse();
+	Vector3* pbrMaterialRf0 = app->getModuleAssignment2()->getMaterialFresnel0();
+	float* pbrMaterialN = app->getModuleAssignment2()->getMaterialN();
+
+	ImGui::Begin("Material");
+	ImGui::ColorEdit3("Material diffuse", &pbrMaterialDiffuse->x);
+	ImGui::ColorEdit3("Material Rf0", &pbrMaterialRf0->x, 0.01f);
+	ImGui::DragFloat("Material n", pbrMaterialN, 0.5f, 1.0f, 1500.0f);
+	ImGui::End();
 }

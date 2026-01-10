@@ -32,6 +32,7 @@ cbuffer LightCB : register(b5)
     float _pad1; // Padding to 16B
     float3 lightColor;
     float _pad2; // Padding to 16B
+    float lightIntensity;
 };
 
 float3 maxRGB(float3 color)
@@ -58,8 +59,9 @@ float4 main(VertexOutput input) : SV_TARGET
     
     float3 albedo = colourTex.Sample(colourSampler, input.texCoords) * materialDiffuse;
     
-    // Diffuse -> reflected color (not specular)
+    // Diffuse -> reflected color -> all that is not specular
     float3 diffuse = albedo * (1 - maxRGB(materialRf0)) / PI;
+    //float3 diffuse = albedo;
     
     // Fresnel -> how much of the reflected light is specular?
     float3 F = FresnelSchlick(VdotH);
@@ -69,7 +71,7 @@ float4 main(VertexOutput input) : SV_TARGET
     
     float3 color =
         (diffuse + specular) // BSDF
-        * lightColor * NdotL;
+        * lightColor * NdotL * lightIntensity;
     
     return float4(color, 1.0);
 }

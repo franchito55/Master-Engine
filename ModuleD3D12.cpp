@@ -1,6 +1,6 @@
 #include "Globals.h"
 #include "ModuleD3D12.h"
-#include "ModuleBuffer.h"
+#include "ModuleNonShaderDescriptors.h"
 
 extern Application* app;
 
@@ -21,10 +21,6 @@ bool ModuleD3D12::init() {
 	initCommandQueues();
 
 	initSwapChain(factory);
-
-	initDescriptorHeaps();
-
-	initDescriptors();
 	
 	// ============ Init fence ============
 	device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&fence));
@@ -32,7 +28,13 @@ bool ModuleD3D12::init() {
 	// ============ Init fence event (we'll use the same event for both fences) ============
 	fenceEvent = CreateEventA(nullptr, FALSE, 0, nullptr);
 
-	initDSB();
+	return true;
+}
+
+// We need ModuleNonShaderDescriptors to have run its init, but ModuleNonShaderDescriptors needs ModuleD3D12 to have run its init...
+bool ModuleD3D12::postInit() {
+	recreateRTVs();
+	dsvIndex = app->getModuleNonShaderDescriptors()->createDSV(depthStencilBuffer.Get());
 
 	return true;
 }
@@ -53,8 +55,6 @@ void ModuleD3D12::preRender() {
 		WaitForFence(fenceValues[frameIndex]);
 	}
 
-	//WaitForFence(fenceValues[currentBackBufferIndex]);
-
 	// Reset allocator for currentBackBufferIndex
 	renderCommandAllocators[currentBackBufferIndex]->Reset();
 
@@ -62,15 +62,17 @@ void ModuleD3D12::preRender() {
 	renderCommandLists[currentBackBufferIndex]->Reset(renderCommandAllocators[currentBackBufferIndex].Get(), nullptr);
 
 	// Set the usage state of the current buffer to RENDER_TARGET
-	barrier = CD3DX12_RESOURCE_BARRIER::Transition(buffers[currentBackBufferIndex].Get(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, D3D12_RESOURCE_BARRIER_FLAG_NONE);
+	barrier = CD3DX12_RESOURCE_BARRIER::Transition(backBuffers[currentBackBufferIndex].Get(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, D3D12_RESOURCE_BARRIER_FLAG_NONE);
 	renderCommandLists[currentBackBufferIndex]->ResourceBarrier(1, &barrier);
 
 	// Set depth buffer view's state back to WRITE
 	depthBufferBarrier = CD3DX12_RESOURCE_BARRIER::Transition(depthStencilBuffer.Get(), D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_DEPTH_WRITE);
 	//renderCommandLists[currentBackBufferIndex]->ResourceBarrier(1, &depthBufferBarrier);
-	renderCommandLists[currentBackBufferIndex]->ClearDepthStencilView(dsvDescriptorHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0.0f, 0, nullptr);
+	D3D12_CPU_DESCRIPTOR_HANDLE dsvCpuHandle = app->getModuleNonShaderDescriptors()->getCPUHandleFromDSVHeap(dsvIndex);
+	renderCommandLists[currentBackBufferIndex]->ClearDepthStencilView(dsvCpuHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0.0f, 0, nullptr);
 
-	renderCommandLists[currentBackBufferIndex]->ClearRenderTargetView(rtvDescriptorHandles[currentBackBufferIndex], color, 0, nullptr);
+	D3D12_CPU_DESCRIPTOR_HANDLE rtvCpuHandle = app->getModuleNonShaderDescriptors()->getCPUHandleFromRTVHeap(rtvIndices[currentBackBufferIndex]);
+	renderCommandLists[currentBackBufferIndex]->ClearRenderTargetView(rtvCpuHandle, color, 0, nullptr);
 }
 
 void ModuleD3D12::render() {
@@ -78,7 +80,7 @@ void ModuleD3D12::render() {
 
 void ModuleD3D12::postRender() {
 	// Transition back to PRESENT
-	barrier = CD3DX12_RESOURCE_BARRIER::Transition(buffers[currentBackBufferIndex].Get(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, D3D12_RESOURCE_BARRIER_FLAG_NONE);
+	barrier = CD3DX12_RESOURCE_BARRIER::Transition(backBuffers[currentBackBufferIndex].Get(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, D3D12_RESOURCE_BARRIER_FLAG_NONE);
 	renderCommandLists[currentBackBufferIndex]->ResourceBarrier(1, &barrier);
 
 	// Close list and execute command list
@@ -92,6 +94,25 @@ void ModuleD3D12::postRender() {
 	// This tells the GPU to set the fence's value to what you pass
 	fenceValues[currentBackBufferIndex] = frameCount++;
 	renderCommandQueue->Signal(fence.Get(), fenceValues[currentBackBufferIndex]);
+}
+
+void ModuleD3D12::flush() {
+	renderCommandQueue->Signal(fence.Get(), fenceValues[currentBackBufferIndex]);
+	// Set fenceEvent as "completed" when the fence's value == frameCounter
+	fence->SetEventOnCompletion(fenceValues[currentBackBufferIndex], fenceEvent);
+	// Wait for the event to be "completed" (it means the GPU has increased the fence value by 1 and is done processing the frame)
+	WaitForSingleObject(fenceEvent, INFINITE);
+	deltaTime = std::chrono::time_point_cast<std::chrono::milliseconds>(std::chrono::system_clock::now()) - lastFrameTime;
+	lastFrameTime = std::chrono::time_point_cast<std::chrono::milliseconds>(std::chrono::system_clock::now());
+}
+
+// Flushes a specific command queue (for example the copy one)
+void ModuleD3D12::flush(ID3D12CommandQueue* commandQueue) {
+	commandQueue->Signal(fence.Get(), fenceValues[currentBackBufferIndex]);
+	// Set fenceEvent as "completed" when the fence's value == frameCounter
+	fence->SetEventOnCompletion(fenceValues[currentBackBufferIndex], fenceEvent);
+	// Wait for the event to be "completed" (it means the GPU has increased the fence value by 1 and is done processing the frame)
+	WaitForSingleObject(fenceEvent, INFINITE);
 }
 
 void ModuleD3D12::WaitForFence(const unsigned int _fenceValue) {
@@ -109,32 +130,21 @@ void ModuleD3D12::setResizePending(const RECT &_resizedRect) {
 }
 
 void ModuleD3D12::resizeBuffers() {
-	// TODO: resize depth/stencil buffer
 	
-	// Release swap chain buffers
+	// Release RTVs
 	for (unsigned int i = 0; i < FRAME_BUFFER_NUM; i++) {
-		buffers[i].Reset();
+		backBuffers[i].Reset();
 	}
 	// Release DSV
 	depthStencilBuffer.Reset();
 
+	app->getModuleNonShaderDescriptors()->reset();
+
 	swapChain->ResizeBuffers(FRAME_BUFFER_NUM, resizedRect.right - resizedRect.left, resizedRect.bottom - resizedRect.top, DXGI_FORMAT_UNKNOWN, 0);
-	for (unsigned int i = 0; i < FRAME_BUFFER_NUM; i++) {
-		swapChain->GetBuffer(i, IID_PPV_ARGS(&buffers[i]));
-		CD3DX12_CPU_DESCRIPTOR_HANDLE::InitOffsetted(rtvDescriptorHandles[i], descriptorHeap.Get()->GetCPUDescriptorHandleForHeapStart(), i, device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV));
-		device->CreateRenderTargetView(buffers[i].Get(), nullptr, rtvDescriptorHandles[i]);
-	}
+	recreateRTVs();
 
 	// Re-create DSV
-	CD3DX12_HEAP_PROPERTIES dsbHeapProps = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
-	CD3DX12_RESOURCE_DESC dsbHeapDesc = CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT_D32_FLOAT, app->getWindowWidth(), app->getWindowHeight(), 1, 0, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL);
-	D3D12_CLEAR_VALUE clearValue = {};
-	clearValue.Format = DXGI_FORMAT_D32_FLOAT;
-	clearValue.DepthStencil.Depth = 1.0f;
-	clearValue.DepthStencil.Stencil = 0;
-	device->CreateCommittedResource(&dsbHeapProps, D3D12_HEAP_FLAG_NONE, &dsbHeapDesc, D3D12_RESOURCE_STATE_DEPTH_WRITE, &clearValue, IID_PPV_ARGS(&depthStencilBuffer));
-	CD3DX12_CPU_DESCRIPTOR_HANDLE::InitOffsetted(dsvDescriptorHandle, depthBufferDescriptorHeap.Get()->GetCPUDescriptorHandleForHeapStart(), 0, device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV));
-	device->CreateDepthStencilView(depthStencilBuffer.Get(), nullptr, dsvDescriptorHandle);
+	app->getModuleNonShaderDescriptors()->createDSV(depthStencilBuffer.Get());
 	
 	// swapChain->ResizeBuffers() RESETS the swap chain's current back buffer index 
 	// back to 0, so we need to update it here
@@ -236,70 +246,6 @@ void ModuleD3D12::initSwapChain(ComPtr<IDXGIFactory6> factory) {
 	factory->CreateSwapChainForHwnd(renderCommandQueue.Get(), hWnd, &swapChainDesc, nullptr, nullptr, (IDXGISwapChain1**)IID_PPV_ARGS_Helper(&swapChain));
 }
 
-void ModuleD3D12::initDescriptorHeaps() {
-	// ============ Init descriptor heap (non-shader visible) ============ 
-	D3D12_DESCRIPTOR_HEAP_DESC descriptorHeapDesc = {};
-	// Type = Render Target View
-	descriptorHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
-	// How many RTVs (2 -> 1 back buffer, 1 front buffer)
-	descriptorHeapDesc.NumDescriptors = FRAME_BUFFER_NUM;
-	// Shader-visible ?
-	descriptorHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
-	// Flags for multi-adapter. Which adapter this descriptor is for
-	descriptorHeapDesc.NodeMask = 0;
-	device->CreateDescriptorHeap(&descriptorHeapDesc, IID_PPV_ARGS(&descriptorHeap));
-
-	// ============ Init descriptor heap for shader visible (CBV, SRV, UAV) ============
-	D3D12_DESCRIPTOR_HEAP_DESC shaderVisibleDescriptorHeapDesc = {};
-	// Type = Render Target View
-	shaderVisibleDescriptorHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
-	// How many RTVs (2 -> 1 back buffer, 1 front buffer)
-	shaderVisibleDescriptorHeapDesc.NumDescriptors = SHADER_VISIBLE_DESCRIPTOR_NUMBER;
-	// Shader-visible ?
-	shaderVisibleDescriptorHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
-	// Flags for multi-adapter. Which adapter this descriptor is for
-	shaderVisibleDescriptorHeapDesc.NodeMask = 0;
-	device->CreateDescriptorHeap(&shaderVisibleDescriptorHeapDesc, IID_PPV_ARGS(&shaderVisibleDescriptorHeap));
-
-	// ============ Init DSV descriptor heap ============ 
-	D3D12_DESCRIPTOR_HEAP_DESC dsbDescriptorHeap = {};
-	// Type = Depth/Stencil View
-	dsbDescriptorHeap.Type = D3D12_DESCRIPTOR_HEAP_TYPE_DSV;
-	// 1 depth buffer
-	dsbDescriptorHeap.NumDescriptors = 1;
-	// Non-shader-visible
-	dsbDescriptorHeap.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
-	// Flags for multi-adapter. Which adapter this descriptor is for
-	dsbDescriptorHeap.NodeMask = 0;
-	device->CreateDescriptorHeap(&dsbDescriptorHeap, IID_PPV_ARGS(&depthBufferDescriptorHeap));
-}
-
-void ModuleD3D12::initDescriptors() {
-	// ============ Init descriptors ============
-	for (int i = 0; i < FRAME_BUFFER_NUM; i++) {
-		swapChain->GetBuffer(i, IID_PPV_ARGS(&buffers[i]));
-		CD3DX12_CPU_DESCRIPTOR_HANDLE::InitOffsetted(rtvDescriptorHandles[i], descriptorHeap.Get()->GetCPUDescriptorHandleForHeapStart(), i, device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV));
-		device->CreateRenderTargetView(buffers[i].Get(), nullptr, rtvDescriptorHandles[i]);
-	}
-}
-
-void ModuleD3D12::initDSB() {
-	// ============ Init depth & stencil buffers ============
-	CD3DX12_HEAP_PROPERTIES dsbHeapProps = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
-	CD3DX12_RESOURCE_DESC dsbHeapDesc = CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT_D32_FLOAT, app->getWindowWidth(), app->getWindowHeight(), 1, 0, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL);
-	D3D12_CLEAR_VALUE clearValue = {};
-	clearValue.Format = DXGI_FORMAT_D32_FLOAT;
-	clearValue.DepthStencil.Depth = 1.0f;
-	clearValue.DepthStencil.Stencil = 0;
-	device->CreateCommittedResource(&dsbHeapProps, D3D12_HEAP_FLAG_NONE, &dsbHeapDesc, D3D12_RESOURCE_STATE_DEPTH_WRITE, &clearValue, IID_PPV_ARGS(&depthStencilBuffer));
-}
-
-void ModuleD3D12::initDSV() {
-	// ============ Init DSV (depth/stencil view) ============
-	CD3DX12_CPU_DESCRIPTOR_HANDLE::InitOffsetted(dsvDescriptorHandle, depthBufferDescriptorHeap.Get()->GetCPUDescriptorHandleForHeapStart(), 0, device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV));
-	device->CreateDepthStencilView(depthStencilBuffer.Get(), nullptr, dsvDescriptorHandle);
-}
-
 void ModuleD3D12::enableDebugLayer() {
 	// enable debug layer
 #ifdef _DEBUG
@@ -312,5 +258,13 @@ void ModuleD3D12::enableDebugLayer() {
 void ModuleD3D12::WaitForAllFences() {
 	for (unsigned int i = 0; i < FRAME_BUFFER_NUM; i++) {
 		WaitForFence(fenceValues[i]);
+	}
+}
+
+void ModuleD3D12::recreateRTVs() {
+	for (UINT i = 0; i < FRAME_BUFFER_NUM; ++i)
+	{
+		swapChain->GetBuffer(i, IID_PPV_ARGS(&backBuffers[i]));
+		rtvIndices[i] = app->getModuleNonShaderDescriptors()->createRTV(backBuffers[i].Get());
 	}
 }

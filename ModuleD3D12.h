@@ -5,7 +5,6 @@
 #include "Application.h"
 
 #define FRAME_BUFFER_NUM 3
-#define SHADER_VISIBLE_DESCRIPTOR_NUMBER 1000
 
 class ModuleD3D12 : public Module {
 	typedef struct ResizeStruct {
@@ -16,6 +15,7 @@ class ModuleD3D12 : public Module {
 public:
 	ModuleD3D12(HWND _hWnd);
 	bool init() override;
+	bool postInit() override;
 	void render() override;
 	void preRender() override;
 	void postRender() override;
@@ -25,13 +25,18 @@ public:
 	ComPtr<ID3D12CommandQueue> getRenderCommandQueue() const { return renderCommandQueue; }
 	ComPtr<ID3D12CommandQueue> getCopyCommandQueue() const { return copyCommandQueue; }
 	ComPtr<ID3D12GraphicsCommandList> getCopyCommandList() const { return copyCommandList; }
+	ComPtr<ID3D12CommandAllocator> getCopyCommandAllocator() const { return copyCommandAllocator; }
+	ComPtr<IDXGISwapChain4> getSwapChain() const { return swapChain; }
+	ComPtr<ID3D12Resource2> getBuffer(unsigned int index) const { return backBuffers[index]; }
 	void setResizePending(const RECT &resizedRect);
 	void resizeBuffers();
-	const D3D12_CPU_DESCRIPTOR_HANDLE* getCurrentRtvCpuDescriptorHandle() const { return &rtvDescriptorHandles[currentBackBufferIndex]; }
+	void flush();
+	void flush(ID3D12CommandQueue* commandQueue);
+	unsigned int getCurrentRTVIndexInRTVHeap() const { return rtvIndices[currentBackBufferIndex]; }
+	void setRTVIndex(const unsigned int index, const unsigned int rtvIndex) { rtvIndices[index] = rtvIndex; }
 	ComPtr<ID3D12Fence> getFence() const { return fence; }
 	ComPtr<ID3D12Resource2> getDepthStencilBuffer() const { return depthStencilBuffer; }
-	const D3D12_CPU_DESCRIPTOR_HANDLE* getDSVCPUDescriptorHandle() const { return &dsvDescriptorHandle; }
-	ComPtr<ID3D12DescriptorHeap> getShaderVisibleDescriptorHeap() const { return shaderVisibleDescriptorHeap; }
+	unsigned int getDSVIndexInDSVHeap() const { return dsvIndex; }
 	void WaitForAllFences();
 	long long getDeltaTime() { return deltaTime.count(); }
 
@@ -46,12 +51,9 @@ private:
 	ComPtr<ID3D12CommandQueue> renderCommandQueue;
 	ComPtr<ID3D12CommandQueue> copyCommandQueue;
 	ComPtr<IDXGISwapChain4> swapChain;
-	ComPtr<ID3D12Resource2> buffers[FRAME_BUFFER_NUM];
-	ComPtr<ID3D12DescriptorHeap> descriptorHeap;
-	ComPtr<ID3D12DescriptorHeap> depthBufferDescriptorHeap;
-	ComPtr<ID3D12DescriptorHeap> shaderVisibleDescriptorHeap;
-	D3D12_CPU_DESCRIPTOR_HANDLE rtvDescriptorHandles[FRAME_BUFFER_NUM];
-	D3D12_CPU_DESCRIPTOR_HANDLE dsvDescriptorHandle;
+	ComPtr<ID3D12Resource2> backBuffers[FRAME_BUFFER_NUM];
+	unsigned int rtvIndices[FRAME_BUFFER_NUM]; // Indices in the ModuleNonShaderDescriptor's heap
+	unsigned int dsvIndex; // Index in the ModuleNonShaderDescriptor's heap
 	ComPtr<ID3D12Resource2> depthStencilBuffer;
 	unsigned int currentBackBufferIndex = 0;
 	ComPtr<ID3D12Fence1> fence;
@@ -81,8 +83,5 @@ private:
 	void initCommandLists();
 	void initCommandQueues();
 	void initSwapChain(const ComPtr<IDXGIFactory6> factory);
-	void initDescriptorHeaps();
-	void initDescriptors();
-	void initDSB();
-	void initDSV();
+	void recreateRTVs();
 };

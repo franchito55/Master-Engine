@@ -39,6 +39,7 @@ private:
 	bool showXZGrid = true;
 	bool showAxisTriad = true;
 	bool showCameraTarget = false;
+	bool showGeometryGizmo = true;
 
 	// Console
 	std::vector<std::string> consoleLog;
@@ -49,6 +50,7 @@ private:
 	void showTextureInfoWindow();
 	void showGeometryInfoWindow();
 	void showLightingInfoWindow();
+	void showMaterialInfoWindow();
 	void showDebugGizmosWindow();
 	void showConsoleWindow();
 	void showCameraInfoWindow();

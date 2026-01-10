@@ -2,10 +2,12 @@
 #include "Application.h"
 #include "ModuleInput.h"
 #include "ModuleD3D12.h"
-#include "ModuleBuffer.h"
 #include "ModuleCameraEditor.h"
 #include "ModuleAssignment2.h"
 #include "ModuleImGui.h"
+#include "ModuleResources.h"
+#include "ModuleShaderDescriptors.h"
+#include "ModuleNonShaderDescriptors.h"
 
 Application::Application(int argc, wchar_t** argv, void* hWnd)
 {
@@ -16,7 +18,9 @@ Application::Application(int argc, wchar_t** argv, void* hWnd)
     modules.push_back(new ModuleCameraEditor((HWND)hWnd));
     modules.push_back(new ModuleInput((HWND)hWnd));
     modules.push_back(new ModuleD3D12((HWND)hWnd));
-    modules.push_back(new ModuleBuffer((HWND)hWnd));
+    modules.push_back(new ModuleResources((HWND)hWnd));
+    modules.push_back(new ModuleShaderDescriptors((HWND)hWnd));
+    modules.push_back(new ModuleNonShaderDescriptors((HWND)hWnd));
     modules.push_back(new ModuleAssignment2((HWND)hWnd));
     modules.push_back(new ModuleImGui((HWND)hWnd)); // ModuleImGui MUST go last
 }
@@ -38,7 +42,8 @@ bool Application::init()
 	for(auto it = modules.begin(); it != modules.end() && ret; ++it)
 		ret = (*it)->init();
 
-    getModuleAssignment2()->postInit();
+    for (auto it = modules.begin(); it != modules.end() && ret; ++it)
+        ret = (*it)->postInit();
 
     lastMilis = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 
