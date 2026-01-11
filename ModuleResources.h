@@ -16,6 +16,7 @@ public:
 	void createDefaultBufferWithData(ComPtr<ID3D12Resource>& resourceHandle, const void* data, const unsigned int bufferSize); // Version with copying data in same function
 	ComPtr<ID3D12Resource> createDefaultBuffer(const unsigned int bufferSize); // Resource created in function and returned
 	void createDefaultBuffer(ComPtr<ID3D12Resource>& resourceHandle, D3D12_RESOURCE_DESC& bufferDesc);
+	void createDefaultBuffer(ComPtr<ID3D12Resource>& resourceHandle, D3D12_RESOURCE_DESC& bufferDesc, D3D12_RESOURCE_STATES resourceState);
 	void copyDataToUploadBuffer(ComPtr<ID3D12Resource>& resourceHandle, const void* data, const size_t size);
 	void copyDataFromUploadBufferToDefaultBuffer(ComPtr<ID3D12Resource>& defaultBufferHandle, ComPtr<ID3D12Resource>& uploadBufferHandle);
 	ScratchImage createTextureFromFile(const std::string& path, ComPtr<ID3D12Resource>& defaultBufferHandle, ComPtr<ID3D12Resource>& uploadBufferHandle);

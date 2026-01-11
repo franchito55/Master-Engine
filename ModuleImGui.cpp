@@ -5,8 +5,8 @@
 #include "ModuleD3D12.h"
 #include "ModuleAssignment2.h"
 #include "ModuleCameraEditor.h"
-#include "ImGuizmo.h"
 #include "ModuleNonShaderDescriptors.h"
+#include "ModuleShaderDescriptors.h"
 #include "ModuleInput.h"
 #include "Keyboard.h"
 #include "Mouse.h"
@@ -17,8 +17,12 @@
 extern Application* app;
 
 bool ModuleImGui::init() {
+	app->setModuleImGui(this);
+	app->setSceneRenderWindowWidth(400);
+	app->setSceneRenderWindowHeight(400);
 	moduleD3D12 = app->getModuleD3D12();
 	moduleCamera = app->getModuleCamera();
+	sceneRenderWindowSize = { 400, 400 };
 
 	// ============ Init ImGui wrapper ============
 	imGuiPass = new ImGuiPass(moduleD3D12->getDevice().Get(), hWnd, {0}, {0});
@@ -32,15 +36,18 @@ void ModuleImGui::preRender() {
 }
 
 void ModuleImGui::render() {
+
+	ImGui::DockSpaceOverViewport();
 	
 	showFpsInfoWindow();
 	showTextureInfoWindow();
-	showGeometryInfoWindow();
 	showDebugGizmosWindow();
 	showConsoleWindow();
 	showCameraInfoWindow();
 	showLightingInfoWindow();
 	showMaterialInfoWindow();
+	showSceneRenderWindow();
+	showGeometryInfoWindow();
 
 	fpsCount++;
 
@@ -107,19 +114,9 @@ void ModuleImGui::showGeometryInfoWindow() {
 	// ============ Geometry info window ============
 	ImGui::Begin("Geometry");
 	Matrix cameraViewMatrix = moduleCamera->GetViewMatrix();
-	Matrix cameraProjMatrix = moduleCamera->GetProjectionMatrix();
+	Matrix cameraProjectionMatrix = moduleCamera->GetProjectionMatrix();
 	Matrix* model = app->getModuleAssignment2()->getModelMatrix();
-	if (showGeometryGizmo && !(app->getModuleInput()->GetKeyboard()->GetState().LeftAlt || app->getModuleInput()->GetMouse()->GetState().rightButton)) {
-		ImGuizmo::BeginFrame();
-		handleEditTransform(&cameraViewMatrix._11, &cameraProjMatrix._11, &model->_11);
-	}
-	ImGui::End();
-}
 
-void ModuleImGui::handleEditTransform(float* cameraView, float* cameraProjection, float* matrix)
-{
-	static ImGuizmo::OPERATION mCurrentGizmoOperation(ImGuizmo::ROTATE);
-	static ImGuizmo::MODE mCurrentGizmoMode(ImGuizmo::WORLD);
 	if (ImGui::IsKeyPressed(ImGuiKey_T))
 		mCurrentGizmoOperation = ImGuizmo::TRANSLATE;
 	if (ImGui::IsKeyPressed(ImGuiKey_E))
@@ -134,12 +131,13 @@ void ModuleImGui::handleEditTransform(float* cameraView, float* cameraProjection
 	ImGui::SameLine();
 	if (ImGui::RadioButton("Scale", mCurrentGizmoOperation == ImGuizmo::SCALE))
 		mCurrentGizmoOperation = ImGuizmo::SCALE;
-	float matrixTranslation[3], matrixRotation[3], matrixScale[3];
-	ImGuizmo::DecomposeMatrixToComponents(matrix, matrixTranslation, matrixRotation, matrixScale);
-	ImGui::DragFloat3("Position", matrixTranslation, 0.1f, -100.0f, 100.0f);
-	ImGui::DragFloat3("Rotation", matrixRotation, 0.1f, -100.0f, 100.0f);
-	ImGui::DragFloat3("Scale", matrixScale, 0.1f, -100.0f, 100.0f);
-	ImGuizmo::RecomposeMatrixFromComponents(matrixTranslation, matrixRotation, matrixScale, matrix);
+
+	Vector3* position = app->getModuleAssignment2()->getObjectPosition();
+	Vector3* rotation = app->getModuleAssignment2()->getObjectRotation();
+	Vector3* scale = app->getModuleAssignment2()->getObjectScale();
+	ImGui::DragFloat3("Position", &position->x, 0.1f, -40.0f, 40.0f);
+	ImGui::DragFloat3("Rotation", &rotation->x, 1.0f, -360.0f, 360.0f);
+	ImGui::DragFloat3("Scale", &scale->x, 0.001f, -10.0f, 10.0f);
 
 	if (mCurrentGizmoOperation != ImGuizmo::SCALE)
 	{
@@ -149,9 +147,14 @@ void ModuleImGui::handleEditTransform(float* cameraView, float* cameraProjection
 		if (ImGui::RadioButton("World", mCurrentGizmoMode == ImGuizmo::WORLD))
 			mCurrentGizmoMode = ImGuizmo::WORLD;
 	}
-	ImGuiIO& io = ImGui::GetIO();
-	ImGuizmo::SetRect(0, 0, io.DisplaySize.x, io.DisplaySize.y);
-	ImGuizmo::Manipulate(cameraView, cameraProjection, mCurrentGizmoOperation, mCurrentGizmoMode, matrix, NULL, NULL);
+	if (ImGuizmo::IsUsing()) {
+		float matrixTranslation[3], matrixRotation[3], matrixScale[3];
+		ImGuizmo::DecomposeMatrixToComponents(&model->_11, matrixTranslation, matrixRotation, matrixScale);
+		app->getModuleAssignment2()->setObjectPosition(Vector3(matrixTranslation[0], matrixTranslation[1], matrixTranslation[2]));
+		app->getModuleAssignment2()->setObjectRotation(Vector3(matrixRotation[0], matrixRotation[1], matrixRotation[2]));
+		app->getModuleAssignment2()->setObjectScale(Vector3(matrixScale[0], matrixScale[1], matrixScale[2]));
+	}
+	ImGui::End();
 }
 
 void ModuleImGui::showDebugGizmosWindow() {
@@ -282,4 +285,50 @@ void ModuleImGui::showMaterialInfoWindow() {
 	ImGui::ColorEdit3("Material Rf0", &pbrMaterialRf0->x, 0.01f);
 	ImGui::DragFloat("Material n", pbrMaterialN, 0.5f, 1.0f, 1500.0f);
 	ImGui::End();
+}
+
+void ModuleImGui::showSceneRenderWindow() {
+	ImGui::Begin("Scene");
+	ImVec2 newWindowSize = ImGui::GetContentRegionAvail();
+	if (newWindowSize.x > 0 && newWindowSize.y > 0 &&
+		(abs(sceneRenderWindowSize.x - newWindowSize.x) > 1 ||
+			abs(sceneRenderWindowSize.y - newWindowSize.y) > 1)) {
+		app->setSceneRenderWindowWidth(newWindowSize.x);
+		app->setSceneRenderWindowHeight(newWindowSize.y);
+		sceneRenderWindowSize = newWindowSize;
+		RECT resizePending;
+		resizePending.left = 0;
+		resizePending.right = sceneRenderWindowSize.x;
+		resizePending.top = 0;
+		resizePending.bottom = sceneRenderWindowSize.y;
+		app->getModuleD3D12()->setSceneResizePending(resizePending);
+	}
+
+	sceneRenderWindowPos = ImGui::GetWindowPos();
+	sceneRenderWindowCursorPos = ImGui::GetCursorPos();
+	sceneRenderWindowImageRectMin = ImGui::GetWindowContentRegionMin();
+	sceneRenderWindowImageRectMax = ImGui::GetWindowContentRegionMax();
+
+	sceneRenderWindowHovered = ImGui::IsWindowHovered();
+	ImGui::Image((ImTextureID)app->getModuleShaderDescriptors()->getGPUHandleFromGenericHeap(app->getModuleD3D12()->getSceneSRVIndexInHeap()).ptr, sceneRenderWindowSize);
+
+	// Gizmo
+	Matrix cameraViewMatrix = moduleCamera->GetViewMatrix();
+	Matrix cameraProjectionMatrix = moduleCamera->GetProjectionMatrix();
+	Matrix* model = app->getModuleAssignment2()->getModelMatrix();
+	ImGuizmo::SetRect(
+		sceneRenderWindowPos.x + sceneRenderWindowImageRectMin.x,
+		sceneRenderWindowPos.y + sceneRenderWindowImageRectMin.y,
+		sceneRenderWindowImageRectMax.x - sceneRenderWindowImageRectMin.x,
+		sceneRenderWindowImageRectMax.y - sceneRenderWindowImageRectMin.y
+	);
+	ImGuizmo::BeginFrame();
+	ImGuizmo::SetDrawlist();
+	ImGuizmo::Manipulate(&cameraViewMatrix._11, &cameraProjectionMatrix._11, mCurrentGizmoOperation, mCurrentGizmoMode, &model->_11, NULL, NULL);
+
+	ImGui::End();
+}
+
+bool ModuleImGui::compareVectors(float* v0, float* v1) {
+	return v0[0] == v1[0] && v0[1] == v1[1] && v0[2] == v1[2];
 }

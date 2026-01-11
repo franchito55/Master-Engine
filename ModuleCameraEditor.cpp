@@ -6,6 +6,7 @@
 #include "Mouse.h"
 #include "DebugDrawPass.h"
 #include "ModuleAssignment2.h"
+#include "ModuleImGui.h"
 #include <algorithm>
 
 #define PI 3.14159265358979323846
@@ -16,7 +17,7 @@ ModuleCameraEditor::ModuleCameraEditor(HWND hWnd) {}
 
 bool ModuleCameraEditor::init() {
 	app->setModuleCamera(this); transform.position = Vector3(1.0f, 1.5f, 3.0f);
-	transform.rotation = Quaternion::Identity;
+	transform.rotation = Vector3(0.0f, 0.0f, 0.0f);
 	transform.forward = target - transform.position;
 	transform.forward.Normalize();
 	transform.up = Vector3(0.0f, 1.0f, 0.0f);
@@ -47,7 +48,7 @@ void ModuleCameraEditor::update() {
 	int mouseScrollWheelDelta = mouseState.scrollWheelValue - previousScrollWheelValue;
 
 	// Don't scroll if hovering any ImGui window
-	if (!ImGui::IsWindowHovered(ImGuiHoveredFlags_AnyWindow) && mouseScrollWheelDelta != 0) {
+	if (app->getModuleImGui()->getIsSceneRenderWindowHovered() && mouseScrollWheelDelta != 0) {
 		// We have to check if the next distance is <= the current one, since if the user scrolls really hard, it could jump to
 		// the other side of the triangle, bypassing the max zoom
 		Vector3 nextPos = transform.position + transform.forward * zoomSpeed / 1000.0f * mouseScrollWheelDelta;
@@ -61,7 +62,7 @@ void ModuleCameraEditor::update() {
 	Vector3 targetOffset = target - transform.position;
 
 	// Don't rotate if modifying the ImGui's drag sliders
-	if (!ImGui::IsAnyItemActive() && kbState.LeftAlt && mouseState.leftButton && !mouseState.rightButton) {
+	if (app->getModuleImGui()->getIsSceneRenderWindowHovered() && kbState.LeftAlt && mouseState.leftButton && !mouseState.rightButton) {
 
 		if (mouseDeltaY != 0) {
 			Vector3 offset = transform.position - target;
@@ -85,7 +86,7 @@ void ModuleCameraEditor::update() {
 	}
 
 	// Only EITHER rotate OR orbit, not both (too complicated and too tired to think of it)
-	if (mouseState.rightButton && !mouseState.leftButton) {
+	if (app->getModuleImGui()->getIsSceneRenderWindowHovered() && mouseState.rightButton && !mouseState.leftButton) {
 		// Get the offset of the target relative to the camera
 		Vector3 offset = target - transform.position;
 
@@ -136,8 +137,8 @@ void ModuleCameraEditor::update() {
 		currentOrbitingDistance = (transform.position - target).Length();
 	}
 
-	if (kbState.F) {
-		Vector3 newTarget = *app->getModuleAssignment2()->getObjectPosition();
+	if (app->getModuleImGui()->getIsSceneRenderWindowHovered() && kbState.F) {
+		Vector3 newTarget = app->getModuleAssignment2()->getTransform()->position;
 		transform.forward = newTarget - transform.position;
 		transform.forward.Normalize();
 		transform.right = transform.forward.Cross(Vector3(0.0f, 1.0f, 0.0f));
@@ -153,7 +154,7 @@ void ModuleCameraEditor::update() {
 	previousScrollWheelValue = mouseState.scrollWheelValue;
 
 	view = Matrix::CreateLookAt(transform.position, transform.position + transform.forward, transform.up);
-	projection = Matrix::CreatePerspectiveFieldOfView(fov * (PI / 180.0f), (float)app->getWindowWidth() / app->getWindowHeight(), nearPlane, farPlane);
+	projection = Matrix::CreatePerspectiveFieldOfView(fov * (PI / 180.0f), (float)app->getSceneRenderWindowWidth() / app->getSceneRenderWindowHeight(), nearPlane, farPlane);
 }
 
 void ModuleCameraEditor::render() {
@@ -197,7 +198,7 @@ void ModuleCameraEditor::render() {
     view = Matrix::CreateLookAt(transform.position, target, transform.up);
     projection = Matrix::CreatePerspectiveFieldOfView(
         fov * (PI / 180.0f),
-        static_cast<float>(app->getWindowWidth()) / app->getWindowHeight(),
+        static_cast<float>(app->getSceneRenderWindowWidth()) / app->getSceneRenderWindowHeight(),
         nearPlane,
         farPlane
     );
@@ -209,7 +210,7 @@ void ModuleCameraEditor::recalculateRight() {
 
 void ModuleCameraEditor::resetState() {
 	transform.position = Vector3(0.0f, 3.0f, 7.0f);
-	transform.rotation = Quaternion::Identity;
+	transform.rotation = Vector3(0.0f, 0.0f, 0.0f);
 	transform.forward = Vector3(0.0f, 0.0f, -1.0f);
 	transform.up = Vector3(0.0f, 1.0f, 0.0f);
 	recalculateRight();

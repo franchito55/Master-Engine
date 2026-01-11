@@ -45,6 +45,13 @@ void ModuleResources::createDefaultBuffer(ComPtr<ID3D12Resource>& resourceHandle
 	app->getModuleD3D12()->flush();
 }
 
+void ModuleResources::createDefaultBuffer(ComPtr<ID3D12Resource>& resourceHandle, D3D12_RESOURCE_DESC& bufferDesc, D3D12_RESOURCE_STATES resourceState) {
+	// Default buffer -> heap type = DEFAULT (this buffer will be read by the GPU)
+	CD3DX12_HEAP_PROPERTIES vbHeapProps(D3D12_HEAP_TYPE_DEFAULT);
+	device->CreateCommittedResource(&vbHeapProps, D3D12_HEAP_FLAG_NONE, &bufferDesc, resourceState, nullptr, IID_PPV_ARGS(&resourceHandle));
+	app->getModuleD3D12()->flush();
+}
+
 void ModuleResources::createUploadBuffer(ComPtr<ID3D12Resource>& resourceHandle, const unsigned int bufferSize) {
 	// Staging buffer -> heap type = UPLOAD (this buffer is used to upload data to the GPU)
 	CD3DX12_HEAP_PROPERTIES sbHeapProps(D3D12_HEAP_TYPE_UPLOAD);

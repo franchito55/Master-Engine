@@ -9,11 +9,13 @@
 #include "ModuleResources.h"
 #include "ImGuiPass.h"
 #include "ModuleCameraEditor.h"
-#include "Utils.h"
+#include "GLTFLoader.h"
 #include "Material.h"
 #include "ImGuizmo.h"
 #include "ModuleShaderDescriptors.h"
 #include "ModuleNonShaderDescriptors.h"
+
+#define PI 3.14159265359
 
 ModuleAssignment2::ModuleAssignment2(HWND _hWnd) : hWnd(_hWnd) {}
 
@@ -32,7 +34,6 @@ bool ModuleAssignment2::init() {
 	buildRootSignature();
 
 	buildPSO();
-	
 
 	ComPtr<ID3D12Device> device = app->getModuleD3D12()->getDevice();
 	// Init DebugDrawPass (for drawing axis and stuff)
@@ -41,7 +42,9 @@ bool ModuleAssignment2::init() {
 	debugDrawPass = new DebugDrawPass(d4.Get(), app->getModuleD3D12()->getRenderCommandQueue().Get(), false);
 
 
-	model = Matrix::CreateScale(gameObject->getTransform()->scale) * Matrix::CreateTranslation(gameObject->getTransform()->position);
+	model = Matrix::CreateScale(gameObject->getTransform()->scale) * 
+		Matrix::CreateFromYawPitchRoll(XMConvertToRadians(gameObject->getTransform()->rotation.y), XMConvertToRadians(gameObject->getTransform()->rotation.x), XMConvertToRadians(gameObject->getTransform()->rotation.z)) *
+		Matrix::CreateTranslation(gameObject->getTransform()->position);
 
 	return true;
 }
@@ -67,16 +70,29 @@ void ModuleAssignment2::preRender() {
 }
 
 void ModuleAssignment2::render() {
+	model = Matrix::CreateScale(gameObject->getTransform()->scale) *
+		Matrix::CreateFromYawPitchRoll(XMConvertToRadians(gameObject->getTransform()->rotation.y), XMConvertToRadians(gameObject->getTransform()->rotation.x), XMConvertToRadians(gameObject->getTransform()->rotation.z)) *
+		Matrix::CreateTranslation(gameObject->getTransform()->position);
 	mvp = (model * app->getModuleCamera()->GetViewMatrix() * app->getModuleCamera()->GetProjectionMatrix()).Transpose();
 
 	ComPtr<ID3D12GraphicsCommandList> commandList = app->getModuleD3D12()->getCurrentBufferCommandList();
 
 	commandList->SetPipelineState(pso.Get());
 
-	unsigned int rtvIndexInRTVHeap = app->getModuleD3D12()->getCurrentRTVIndexInRTVHeap();
-	D3D12_CPU_DESCRIPTOR_HANDLE rtvCpuDescriptorHandle = app->getModuleNonShaderDescriptors()->getCPUHandleFromRTVHeap(rtvIndexInRTVHeap);
+	D3D12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition(
+		app->getModuleD3D12()->getSceneRenderTexture(),                  // the texture resource
+		D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
+		D3D12_RESOURCE_STATE_RENDER_TARGET
+	);
+	commandList->ResourceBarrier(1, &barrier);
+
+	//unsigned int rtvIndexInRTVHeap = app->getModuleD3D12()->getCurrentRTVIndexInRTVHeap();
+	//D3D12_CPU_DESCRIPTOR_HANDLE rtvCpuDescriptorHandle = app->getModuleNonShaderDescriptors()->getCPUHandleFromRTVHeap(rtvIndexInRTVHeap);
 	unsigned int dsvIndexInDSVHeap = app->getModuleD3D12()->getDSVIndexInDSVHeap();
 	D3D12_CPU_DESCRIPTOR_HANDLE dsvCpuDescriptorHandle = app->getModuleNonShaderDescriptors()->getCPUHandleFromDSVHeap(dsvIndexInDSVHeap);
+	// TODO: change the render target to the texture
+	unsigned int sceneRTVIndexInHeap = app->getModuleD3D12()->getSceneRTVIndexInHeap();
+	D3D12_CPU_DESCRIPTOR_HANDLE rtvCpuDescriptorHandle = app->getModuleNonShaderDescriptors()->getCPUHandleFromRTVHeap(sceneRTVIndexInHeap);
 	commandList->OMSetRenderTargets(1, &rtvCpuDescriptorHandle, FALSE, &dsvCpuDescriptorHandle);
 	float backgroundColor[4] = { 0.2f, 0.2f, 0.2f, 1.0f };
 	commandList->ClearRenderTargetView(rtvCpuDescriptorHandle, backgroundColor, 0, nullptr);
@@ -117,10 +133,10 @@ void ModuleAssignment2::render() {
 	commandList->IASetIndexBuffer(&iBV);
 	commandList->IASetVertexBuffers(0, 1, &vBV);
 
-	// Set viewport & scissor (whole screen)
-	D3D12_VIEWPORT vp = { 0.0f, 0.0f, float(app->getWindowWidth()), float(app->getWindowHeight()), 0.0f, 1.0f };
+	// Set viewport & scissor
+	D3D12_VIEWPORT vp = { 0.0f, 0.0f, float(app->getSceneRenderWindowWidth()), float(app->getSceneRenderWindowHeight()), 0.0f, 1.0f };
 	commandList->RSSetViewports(1, &vp);
-	D3D12_RECT scissor = { 0, 0, app->getWindowWidth(), app->getWindowHeight() };
+	D3D12_RECT scissor = { 0, 0, app->getSceneRenderWindowWidth(), app->getSceneRenderWindowHeight() };
 	commandList->RSSetScissorRects(1, &scissor);
 
 	commandList->IASetPrimitiveTopology(D3D10_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
@@ -133,7 +149,14 @@ void ModuleAssignment2::render() {
 	commandList->DrawIndexedInstanced(gameObject->getMesh()->getNumIndices(), 1, 0, 0, 0);
 
 	// Draw debug info last so it's on top
-	debugDrawPass->record(commandList.Get(), app->getWindowWidth(), app->getWindowHeight(), app->getModuleCamera()->GetViewMatrix(), app->getModuleCamera()->GetProjectionMatrix());
+	debugDrawPass->record(commandList.Get(), app->getSceneRenderWindowWidth(), app->getSceneRenderWindowHeight(), app->getModuleCamera()->GetViewMatrix(), app->getModuleCamera()->GetProjectionMatrix());
+
+	barrier = CD3DX12_RESOURCE_BARRIER::Transition(
+		app->getModuleD3D12()->getSceneRenderTexture(),                  // the texture resource
+		D3D12_RESOURCE_STATE_RENDER_TARGET,
+		D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE
+	);
+	commandList->ResourceBarrier(1, &barrier);
 }
 
 void ModuleAssignment2::postRender() {}
@@ -260,7 +283,7 @@ GameObject* ModuleAssignment2::createGameObjectFromGLTF(unsigned int meshIndex, 
 	}
 
 	// Load vertices from GLTF
-	Utils::loadMeshIntoGameObjectGLTF(tinyGLTFModel, meshIndex, primitiveIndex, gO);
+	GLTFLoader::loadMeshIntoGameObjectGLTF(tinyGLTFModel, meshIndex, primitiveIndex, gO);
 
 	// Vertex buffer
 	app->getModuleResources()->createDefaultBufferWithData(gpuVertexBuffer, gO->getMesh()->getVertices(), gO->getMesh()->getNumVertices() * sizeof(Vertex));
@@ -281,7 +304,7 @@ GameObject* ModuleAssignment2::createGameObjectFromGLTF(unsigned int meshIndex, 
 
 
 	// Load texture from GLTF
-	Utils::loadTextureIntoGameObjectGLTF(tinyGLTFModel, meshIndex, primitiveIndex, stagingTextureBuffer, gpuTextureBuffer);
+	GLTFLoader::loadTextureIntoGameObjectGLTF(tinyGLTFModel, meshIndex, primitiveIndex, stagingTextureBuffer, gpuTextureBuffer);
 
 	// Init the camera matrices
 	Matrix model = Matrix::CreateScale(gO->getTransform()->scale) * Matrix::CreateTranslation(gO->getTransform()->position);

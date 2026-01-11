@@ -89,7 +89,6 @@ void ImGuiPass::startFrame()
 void ImGuiPass::record(ID3D12GraphicsCommandList* commandList, D3D12_CPU_DESCRIPTOR_HANDLE cpuHandle)
 {
     BEGIN_EVENT(commandList, "ImGui Pass");
-
     ImGui::Render();
     commandList->OMSetRenderTargets(1, &cpuHandle, FALSE, nullptr);
 

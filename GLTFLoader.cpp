@@ -5,7 +5,7 @@
 #define STB_IMAGE_IMPLEMENTATION
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #define TINYGLTF_IMPLEMENTATION
-#include "Utils.h"
+#include "GLTFLoader.h"
 #include "Mesh.h"
 #include "TextureLoader.h"
 #include "GameObject.h"
@@ -17,7 +17,7 @@
 
 extern Application* app;
 
-bool Utils::loadGLTFAccessorData(uint8_t* data, size_t elemSize, size_t stride, size_t elemCount, const tinygltf::Model& model, const std::map<std::string, int> attributes, const char* attributeName) {
+bool GLTFLoader::loadGLTFAccessorData(uint8_t* data, size_t elemSize, size_t stride, size_t elemCount, const tinygltf::Model& model, const std::map<std::string, int> attributes, const char* attributeName) {
 
 	const auto& it = attributes.find(attributeName);
 	if (it != attributes.end()) {
@@ -27,7 +27,7 @@ bool Utils::loadGLTFAccessorData(uint8_t* data, size_t elemSize, size_t stride, 
 	return false;
 }
 
-bool Utils::loadGLTFAccessorData(uint8_t* data, size_t elemSize, size_t stride, size_t elemCount, const tinygltf::Model& model, int accessorIndex) {
+bool GLTFLoader::loadGLTFAccessorData(uint8_t* data, size_t elemSize, size_t stride, size_t elemCount, const tinygltf::Model& model, int accessorIndex) {
 	tinygltf::Accessor accessor = model.accessors.at(accessorIndex);
 	tinygltf::BufferView bufferView = model.bufferViews.at(accessor.bufferView);
 	tinygltf::Buffer buffer = model.buffers.at(bufferView.buffer);
@@ -63,7 +63,7 @@ bool Utils::loadGLTFAccessorData(uint8_t* data, size_t elemSize, size_t stride, 
 	return true;
 }
 
-bool Utils::loadMeshIntoGameObjectGLTF(const tinygltf::Model& model, unsigned int meshIndex, unsigned int primitiveIndex, GameObject* gameObject) {
+bool GLTFLoader::loadMeshIntoGameObjectGLTF(const tinygltf::Model& model, unsigned int meshIndex, unsigned int primitiveIndex, GameObject* gameObject) {
 	const tinygltf::Primitive primitive = model.meshes.at(meshIndex).primitives.at(primitiveIndex);
 	const auto& itPos = primitive.attributes.find("POSITION");
 	if (itPos != primitive.attributes.end()) {
@@ -71,9 +71,9 @@ bool Utils::loadMeshIntoGameObjectGLTF(const tinygltf::Model& model, unsigned in
 		uint32_t numVertices = uint32_t(model.accessors[itPos->second].count);
 		Vertex* vertices = new Vertex[numVertices];
 		uint8_t* vertexData = (uint8_t*)vertices; // Casts Vertex Buffer to Bytes (uint8_t*) buffer
-		Utils::loadGLTFAccessorData(vertexData + offsetof(Vertex, position), sizeof(Vector3), sizeof(Vertex), numVertices, model, itPos->second);
-		Utils::loadGLTFAccessorData(vertexData + offsetof(Vertex, normal), sizeof(Vector3), sizeof(Vertex), numVertices, model, primitive.attributes, "NORMAL");
-		Utils::loadGLTFAccessorData(vertexData + offsetof(Vertex, texCoord), sizeof(Vector2), sizeof(Vertex), numVertices, model, primitive.attributes, "TEXCOORD_0");
+		GLTFLoader::loadGLTFAccessorData(vertexData + offsetof(Vertex, position), sizeof(Vector3), sizeof(Vertex), numVertices, model, itPos->second);
+		GLTFLoader::loadGLTFAccessorData(vertexData + offsetof(Vertex, normal), sizeof(Vector3), sizeof(Vertex), numVertices, model, primitive.attributes, "NORMAL");
+		GLTFLoader::loadGLTFAccessorData(vertexData + offsetof(Vertex, texCoord), sizeof(Vector2), sizeof(Vertex), numVertices, model, primitive.attributes, "TEXCOORD_0");
 		gameObject->getMesh()->setVertices(vertices);
 		gameObject->getMesh()->setNumVertices(numVertices);
 
@@ -81,7 +81,7 @@ bool Utils::loadMeshIntoGameObjectGLTF(const tinygltf::Model& model, unsigned in
 		uint32_t numIndices = model.accessors.at(primitive.indices).count;
 		unsigned short* indices = new unsigned short[numIndices];
 		uint8_t* indexData = (uint8_t*)indices; // Casts Vertex Buffer to Bytes (uint8_t*) buffer
-		Utils::loadGLTFAccessorData(indexData, sizeof(unsigned short), sizeof(unsigned short), numIndices, model, primitive.indices);
+		GLTFLoader::loadGLTFAccessorData(indexData, sizeof(unsigned short), sizeof(unsigned short), numIndices, model, primitive.indices);
 		gameObject->getMesh()->setIndices(indices);
 		gameObject->getMesh()->setNumIndices(numIndices);
 
@@ -98,7 +98,7 @@ bool Utils::loadMeshIntoGameObjectGLTF(const tinygltf::Model& model, unsigned in
 	return false;
 }
 
-bool Utils::loadTextureIntoGameObjectGLTF(const tinygltf::Model& model, unsigned int meshIndex, unsigned int primitiveIndex, ComPtr<ID3D12Resource>& stagingTextureBuffer, ComPtr<ID3D12Resource>& gpuTextureBuffer) {
+bool GLTFLoader::loadTextureIntoGameObjectGLTF(const tinygltf::Model& model, unsigned int meshIndex, unsigned int primitiveIndex, ComPtr<ID3D12Resource>& stagingTextureBuffer, ComPtr<ID3D12Resource>& gpuTextureBuffer) {
 	unsigned int materialIndex = model.meshes.at(meshIndex).primitives.at(primitiveIndex).material;
 	unsigned int textureIndex = model.materials.at(materialIndex).pbrMetallicRoughness.baseColorTexture.index;
 	unsigned int textureImgIndex = model.textures.at(textureIndex).source;

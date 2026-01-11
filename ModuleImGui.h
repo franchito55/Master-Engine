@@ -1,6 +1,7 @@
 #pragma once
 #include "Globals.h"
 #include "Module.h"
+#include "ImGuizmo.h"
 
 #define FPS_PLOTTING_MAX 60
 
@@ -21,6 +22,10 @@ public:
 
 	// Log to ImGui console
 	void log(const char* t);
+
+	ImVec2 getSceneRenderWindowSize() { return sceneRenderWindowSize; }
+	
+	bool getIsSceneRenderWindowHovered() { return sceneRenderWindowHovered; }
 
 private:
 	HWND hWnd;
@@ -45,6 +50,16 @@ private:
 	std::vector<std::string> consoleLog;
 	bool scrollConsoleToBottom = true;
 
+	ImVec2 sceneRenderWindowSize = { 400, 400 };
+	ImVec2 sceneRenderWindowPos = { 0, 0 };
+	ImVec2 sceneRenderWindowCursorPos = { 0, 0 };
+	ImVec2 sceneRenderWindowImageRectMin = { 0, 0 };
+	ImVec2 sceneRenderWindowImageRectMax = { 0, 0 };
+
+	ImGuizmo::OPERATION mCurrentGizmoOperation = ImGuizmo::ROTATE;
+	ImGuizmo::MODE mCurrentGizmoMode = ImGuizmo::WORLD;
+
+	bool sceneRenderWindowHovered = false;
 
 	void showFpsInfoWindow();
 	void showTextureInfoWindow();
@@ -54,6 +69,7 @@ private:
 	void showDebugGizmosWindow();
 	void showConsoleWindow();
 	void showCameraInfoWindow();
+	void showSceneRenderWindow();
 
-	void handleEditTransform(float* viewMatrix, float* projectionMatrix, float* modelMatrix);
+	bool compareVectors(float* v0, float* v1);
 };

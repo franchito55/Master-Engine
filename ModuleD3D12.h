@@ -28,7 +28,8 @@ public:
 	ComPtr<ID3D12CommandAllocator> getCopyCommandAllocator() const { return copyCommandAllocator; }
 	ComPtr<IDXGISwapChain4> getSwapChain() const { return swapChain; }
 	ComPtr<ID3D12Resource2> getBuffer(unsigned int index) const { return backBuffers[index]; }
-	void setResizePending(const RECT &resizedRect);
+	void setWindowResizePending(const RECT &windowResizedRect);
+	void setSceneResizePending(const RECT &sceneResizedRect);
 	void resizeBuffers();
 	void flush();
 	void flush(ID3D12CommandQueue* commandQueue);
@@ -39,6 +40,10 @@ public:
 	unsigned int getDSVIndexInDSVHeap() const { return dsvIndex; }
 	void WaitForAllFences();
 	long long getDeltaTime() { return deltaTime.count(); }
+
+	unsigned int getSceneRTVIndexInHeap() { return sceneRTVIndexInHeap; }
+	unsigned int getSceneSRVIndexInHeap() { return sceneSRVIndexInHeap; }
+	ID3D12Resource* getSceneRenderTexture() { return sceneRenderTexture.Get(); }
 
 private:
 	HWND hWnd;
@@ -66,8 +71,14 @@ private:
 	CD3DX12_RESOURCE_BARRIER barrier = {};
 	CD3DX12_RESOURCE_BARRIER depthBufferBarrier = {};
 
+	// Rendering to texture
+	ComPtr<ID3D12Resource> sceneRenderTexture;
+	unsigned int sceneSRVIndexInHeap = 0;
+	unsigned int sceneRTVIndexInHeap = 0;
+
 	bool resizePending = false;
-	RECT resizedRect = {};
+	RECT windowResizedRect = {};
+	RECT sceneResizedRect = {};
 
 	float color[3] = { 0.2f, 0.2f, 0.2f };
 

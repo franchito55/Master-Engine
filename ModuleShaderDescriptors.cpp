@@ -25,6 +25,7 @@ bool ModuleShaderDescriptors::init() {
 	// Flags for multi-adapter. Which adapter this descriptor is for
 	shaderVisibleDescriptorHeapDesc.NodeMask = 0;
 	app->getModuleD3D12()->getDevice()->CreateDescriptorHeap(&shaderVisibleDescriptorHeapDesc, IID_PPV_ARGS(&genericSrvHeap));
+	genericSrvHeap->SetName(L"Generic SRV Heap");
 
 	// ============ Init descriptor heap for samplers ============
 	D3D12_DESCRIPTOR_HEAP_DESC samplerHeapDesc = {};
@@ -37,6 +38,7 @@ bool ModuleShaderDescriptors::init() {
 	// Flags for multi-adapter. Which adapter this descriptor is for
 	samplerHeapDesc.NodeMask = 0;
 	app->getModuleD3D12()->getDevice()->CreateDescriptorHeap(&samplerHeapDesc, IID_PPV_ARGS(&samplerHeap));
+	samplerHeap->SetName(L"Sampler Heap");
 
 	return true;
 }

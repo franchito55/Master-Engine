@@ -1,6 +1,8 @@
 #include "Globals.h"
 #include "ModuleD3D12.h"
 #include "ModuleNonShaderDescriptors.h"
+#include "ModuleShaderDescriptors.h"
+#include "ModuleImGui.h"
 
 extern Application* app;
 
@@ -124,9 +126,14 @@ void ModuleD3D12::WaitForFence(const unsigned int _fenceValue) {
 	lastFrameTime = std::chrono::time_point_cast<std::chrono::milliseconds>(std::chrono::system_clock::now());
 }
 
-void ModuleD3D12::setResizePending(const RECT &_resizedRect) {
+void ModuleD3D12::setWindowResizePending(const RECT &_resizedRect) {
 	resizePending = true;
-	resizedRect = _resizedRect;
+	windowResizedRect = _resizedRect;
+}
+
+void ModuleD3D12::setSceneResizePending(const RECT &_resizedRect) {
+	resizePending = true;
+	sceneResizedRect = _resizedRect;
 }
 
 void ModuleD3D12::resizeBuffers() {
@@ -140,7 +147,7 @@ void ModuleD3D12::resizeBuffers() {
 
 	app->getModuleNonShaderDescriptors()->reset();
 
-	swapChain->ResizeBuffers(FRAME_BUFFER_NUM, resizedRect.right - resizedRect.left, resizedRect.bottom - resizedRect.top, DXGI_FORMAT_UNKNOWN, 0);
+	swapChain->ResizeBuffers(FRAME_BUFFER_NUM, windowResizedRect.right - windowResizedRect.left, windowResizedRect.bottom - windowResizedRect.top, DXGI_FORMAT_UNKNOWN, 0);
 	recreateRTVs();
 
 	// Re-create DSV
@@ -267,4 +274,38 @@ void ModuleD3D12::recreateRTVs() {
 		swapChain->GetBuffer(i, IID_PPV_ARGS(&backBuffers[i]));
 		rtvIndices[i] = app->getModuleNonShaderDescriptors()->createRTV(backBuffers[i].Get());
 	}
+	float sceneRTVTextureWidth = sceneResizedRect.right - sceneResizedRect.left;
+	float sceneRTVTextureHeight = sceneResizedRect.bottom - sceneResizedRect.top;
+	if (sceneRTVTextureWidth == 0 || sceneRTVTextureHeight == 0) { // Fallback
+		sceneRTVTextureWidth = 400;
+		sceneRTVTextureHeight = 400;
+	}
+	D3D12_RESOURCE_DESC sceneRTVTextureDesc = {};
+	sceneRTVTextureDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+	sceneRTVTextureDesc.Alignment = 0;
+	sceneRTVTextureDesc.Width = sceneRTVTextureWidth;
+	sceneRTVTextureDesc.Height = sceneRTVTextureHeight;
+	sceneRTVTextureDesc.DepthOrArraySize = 1;
+	sceneRTVTextureDesc.MipLevels = 1;
+	sceneRTVTextureDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+	sceneRTVTextureDesc.SampleDesc.Count = 1;
+	sceneRTVTextureDesc.SampleDesc.Quality = 0;
+	sceneRTVTextureDesc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
+	sceneRTVTextureDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
+
+	D3D12_CLEAR_VALUE clearValue = {};
+	clearValue.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+	clearValue.Color[0] = 0.2f;
+	clearValue.Color[1] = 0.2f;
+	clearValue.Color[2] = 0.2f;
+	clearValue.Color[3] = 1.0f;
+
+	CD3DX12_HEAP_PROPERTIES heapProps(D3D12_HEAP_TYPE_DEFAULT);
+	app->getModuleD3D12()->getDevice()->CreateCommittedResource(&heapProps, D3D12_HEAP_FLAG_NONE, &sceneRTVTextureDesc, D3D12_RESOURCE_STATE_RENDER_TARGET, &clearValue, IID_PPV_ARGS(&sceneRenderTexture));
+	sceneSRVIndexInHeap = app->getModuleShaderDescriptors()->createGenericSRV(sceneRenderTexture.Get(), DXGI_FORMAT_R8G8B8A8_UNORM, 1);
+	D3D12_RENDER_TARGET_VIEW_DESC sceneRTVDesc = {};
+	sceneRTVDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+	sceneRTVDesc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
+	sceneRTVDesc.Texture2D.MipSlice = 0;
+	sceneRTVIndexInHeap = app->getModuleNonShaderDescriptors()->createRTV(sceneRenderTexture.Get(), sceneRTVDesc);
 }

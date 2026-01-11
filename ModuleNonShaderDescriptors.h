@@ -12,6 +12,7 @@ public:
 	ID3D12DescriptorHeap* getDSVHeap() { return dsvHeap.Get(); }
 
 	unsigned int createRTV(ID3D12Resource* resource);
+	unsigned int createRTV(ID3D12Resource* resource, D3D12_RENDER_TARGET_VIEW_DESC& desc);
 	unsigned int createDSV(ID3D12Resource* resource);
 	unsigned int allocateDescriptor();
 	D3D12_CPU_DESCRIPTOR_HANDLE getCPUHandleFromRTVHeap(const unsigned int index) const { return CD3DX12_CPU_DESCRIPTOR_HANDLE(rtvHeap->GetCPUDescriptorHandleForHeapStart(), index, rtvDescriptorSize); }

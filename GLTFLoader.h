@@ -12,7 +12,7 @@ namespace tinygltf {
 	class Model;
 }
 
-class Utils {
+class GLTFLoader {
 public: 
 	static bool loadGLTFAccessorData(uint8_t* data, size_t elemSize, size_t stride, size_t elemCount, const tinygltf::Model& model, const std::map<std::string, int> attributes, const char* attributeName);
 	static bool loadGLTFAccessorData(uint8_t* data, size_t elemSize, size_t stride, size_t elemCount, const tinygltf::Model& model, int accessorIndex);

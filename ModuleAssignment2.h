@@ -59,7 +59,13 @@ public:
 	void postRender() override;
 	void createVertexBufferView(D3D12_VERTEX_BUFFER_VIEW* _vBV, GameObject& gO);
 	void createIndexBufferView(D3D12_INDEX_BUFFER_VIEW* _iBV, GameObject& gO);
+	Transform* getTransform() { return gameObject->getTransform(); }
 	Vector3* getObjectPosition() { return &gameObject->getTransform()->position; }
+	void setObjectPosition(const Vector3 position) { gameObject->getTransform()->position = position; }
+	Vector3* getObjectRotation() { return &gameObject->getTransform()->rotation; }
+	void setObjectRotation(const Vector3 rotation) { gameObject->getTransform()->rotation = rotation; }
+	Vector3* getObjectScale() { return &gameObject->getTransform()->scale; }
+	void setObjectScale(const Vector3 scale) { gameObject->getTransform()->scale = scale; }
 
 	Matrix* getModelMatrix() { return &model; } // Return * for ImGui editing
 
@@ -91,14 +97,6 @@ private:
 
 	D3D12_GPU_DESCRIPTOR_HANDLE textureSrvGpuHandle, textureSamplerGpuHandle;
 
-	/*Vertex vertices[6] = {
-		{ Vector3(-1.0f, 1.0f, 0.0f), Vector2(-0.25f, -0.25f) },
-		{ Vector3(-1.0f, -1.0f, 0.0f), Vector2(-0.25f, 1.25f) },
-		{ Vector3(1.0f, -1.0f, 0.0f), Vector2(1.25f, 1.25f) },
-		{ Vector3(-1.0f, 1.0f, 0.0f), Vector2(-0.25f, -0.25f)},
-		{ Vector3(1.0f, -1.0f, 0.0f), Vector2(1.25f, 1.25f) },
-		{ Vector3(1.0f, 1.0f, 0.0f), Vector2(1.25f, -0.25f) }
-	};*/
 
 	GameObject* gameObject = nullptr;
 
@@ -140,6 +138,8 @@ private:
 
 	bool textureFilteringChanged = false;
 	bool textureAddressingChanged = false;
+
+	float timePassed = 0.0f;
 
 	void buildRootSignature();
 	void buildPSO();

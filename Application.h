@@ -15,6 +15,7 @@ class ModuleAssignment2;
 class ModuleResources;
 class ModuleShaderDescriptors;
 class ModuleNonShaderDescriptors;
+class ModuleImGui;
 
 class Application
 {
@@ -61,10 +62,18 @@ public:
     ModuleNonShaderDescriptors* getModuleNonShaderDescriptors() const { return moduleNonShaderDescriptors; }
     void setModuleNonShaderDescriptors(ModuleNonShaderDescriptors* _moduleNonShaderDescriptors) { moduleNonShaderDescriptors = _moduleNonShaderDescriptors; }
 
+    ModuleImGui* getModuleImGui() const { return moduleImGui; }
+    void setModuleImGui(ModuleImGui* _moduleImGui) { moduleImGui = _moduleImGui; }
+
     unsigned int getWindowWidth() const { return windowWidth; }
     void setWindowWidth(const unsigned int _windowWidth) { windowWidth = _windowWidth; }
     unsigned int getWindowHeight() const { return windowHeight; }
     void setWindowHeight(const unsigned int _windowHeight) { windowHeight = _windowHeight; }
+
+    unsigned int getSceneRenderWindowWidth() const { return sceneRenderWindowWidth; }
+    void setSceneRenderWindowWidth(const unsigned int _sceneRenderWindowWidth) { sceneRenderWindowWidth = _sceneRenderWindowWidth; }
+    unsigned int getSceneRenderWindowHeight() const { return sceneRenderWindowHeight; }
+    void setSceneRenderWindowHeight(const unsigned int _sceneRenderWindowHeight) { sceneRenderWindowHeight = _sceneRenderWindowHeight; }
 
 private:
     enum { MAX_FPS_TICKS = 30 };
@@ -87,9 +96,13 @@ private:
     ModuleAssignment2* moduleAssignment2;
     ModuleShaderDescriptors* moduleShaderDescriptors;
     ModuleNonShaderDescriptors* moduleNonShaderDescriptors;
+    ModuleImGui* moduleImGui;
 
     unsigned int windowWidth;
     unsigned int windowHeight;
+
+    unsigned int sceneRenderWindowWidth;
+    unsigned int sceneRenderWindowHeight;
 };
 
 extern Application* app;
