@@ -43,7 +43,7 @@ bool ModuleAssignment2::init() {
 
 
 	model = Matrix::CreateScale(gameObject->getTransform()->scale) * 
-		Matrix::CreateFromYawPitchRoll(XMConvertToRadians(gameObject->getTransform()->rotation.y), XMConvertToRadians(gameObject->getTransform()->rotation.x), XMConvertToRadians(gameObject->getTransform()->rotation.z)) *
+		Matrix::CreateFromQuaternion(gameObject->getTransform()->rotation) *
 		Matrix::CreateTranslation(gameObject->getTransform()->position);
 
 	return true;
@@ -71,7 +71,7 @@ void ModuleAssignment2::preRender() {
 
 void ModuleAssignment2::render() {
 	model = Matrix::CreateScale(gameObject->getTransform()->scale) *
-		Matrix::CreateFromYawPitchRoll(XMConvertToRadians(gameObject->getTransform()->rotation.y), XMConvertToRadians(gameObject->getTransform()->rotation.x), XMConvertToRadians(gameObject->getTransform()->rotation.z)) *
+		Matrix::CreateFromQuaternion(gameObject->getTransform()->rotation) *
 		Matrix::CreateTranslation(gameObject->getTransform()->position);
 	mvp = (model * app->getModuleCamera()->GetViewMatrix() * app->getModuleCamera()->GetProjectionMatrix()).Transpose();
 

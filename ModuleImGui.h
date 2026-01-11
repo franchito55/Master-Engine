@@ -61,6 +61,10 @@ private:
 
 	bool sceneRenderWindowHovered = false;
 
+	Matrix modelMatrixBeforeGizmo = {};
+	// Have to store euler angles separately in UI to avoid gimbal lock
+	Vector3 uiRotationDeg = {};
+
 	void showFpsInfoWindow();
 	void showTextureInfoWindow();
 	void showGeometryInfoWindow();

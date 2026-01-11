@@ -13,6 +13,9 @@
 
 #define MAX_ORBITING_DISTANCE 30.0f
 #define MIN_ORBITING_DISTANCE 0.3f
+#define PI 3.14159265359
+#define RAD2DEG 180.0f / PI
+#define DEG2RAD PI / 180.0f
 
 extern Application* app;
 
@@ -23,6 +26,7 @@ bool ModuleImGui::init() {
 	moduleD3D12 = app->getModuleD3D12();
 	moduleCamera = app->getModuleCamera();
 	sceneRenderWindowSize = { 400, 400 };
+	uiRotationDeg = app->getModuleAssignment2()->getObjectRotation()->ToEuler() * RAD2DEG;
 
 	// ============ Init ImGui wrapper ============
 	imGuiPass = new ImGuiPass(moduleD3D12->getDevice().Get(), hWnd, {0}, {0});
@@ -133,10 +137,10 @@ void ModuleImGui::showGeometryInfoWindow() {
 		mCurrentGizmoOperation = ImGuizmo::SCALE;
 
 	Vector3* position = app->getModuleAssignment2()->getObjectPosition();
-	Vector3* rotation = app->getModuleAssignment2()->getObjectRotation();
 	Vector3* scale = app->getModuleAssignment2()->getObjectScale();
+	Vector3 rotationBefore = uiRotationDeg;
 	ImGui::DragFloat3("Position", &position->x, 0.1f, -40.0f, 40.0f);
-	ImGui::DragFloat3("Rotation", &rotation->x, 1.0f, -360.0f, 360.0f);
+	ImGui::DragFloat3("Rotation", &uiRotationDeg.x, 1.0f, -360.0f, 360.0f);
 	ImGui::DragFloat3("Scale", &scale->x, 0.001f, -10.0f, 10.0f);
 
 	if (mCurrentGizmoOperation != ImGuizmo::SCALE)
@@ -151,9 +155,25 @@ void ModuleImGui::showGeometryInfoWindow() {
 		float matrixTranslation[3], matrixRotation[3], matrixScale[3];
 		ImGuizmo::DecomposeMatrixToComponents(&model->_11, matrixTranslation, matrixRotation, matrixScale);
 		app->getModuleAssignment2()->setObjectPosition(Vector3(matrixTranslation[0], matrixTranslation[1], matrixTranslation[2]));
-		app->getModuleAssignment2()->setObjectRotation(Vector3(matrixRotation[0], matrixRotation[1], matrixRotation[2]));
 		app->getModuleAssignment2()->setObjectScale(Vector3(matrixScale[0], matrixScale[1], matrixScale[2]));
+		Matrix deltaModelMatrix = modelMatrixBeforeGizmo.Invert() * *model;
+		Quaternion deltaRotation = Quaternion::CreateFromRotationMatrix(deltaModelMatrix);
+		Quaternion currRotation = *app->getModuleAssignment2()->getObjectRotation();
+		Quaternion finalRotation;
+		if (mCurrentGizmoMode == ImGuizmo::LOCAL)
+			finalRotation = deltaRotation * currRotation;
+		else
+			finalRotation = currRotation * deltaRotation;
+		finalRotation.Normalize();
+		app->getModuleAssignment2()->setObjectRotation(finalRotation);
+		uiRotationDeg = finalRotation.ToEuler() * RAD2DEG;
 	}
+	else if (uiRotationDeg != rotationBefore) {
+		Vector3 newRotationDeg = uiRotationDeg * DEG2RAD;
+		Quaternion newRotation = Quaternion::CreateFromYawPitchRoll(newRotationDeg.y, newRotationDeg.x, newRotationDeg.z);
+		app->getModuleAssignment2()->setObjectRotation(newRotation);
+	}
+
 	ImGui::End();
 }
 
@@ -324,6 +344,7 @@ void ModuleImGui::showSceneRenderWindow() {
 	);
 	ImGuizmo::BeginFrame();
 	ImGuizmo::SetDrawlist();
+	modelMatrixBeforeGizmo = *model;
 	ImGuizmo::Manipulate(&cameraViewMatrix._11, &cameraProjectionMatrix._11, mCurrentGizmoOperation, mCurrentGizmoMode, &model->_11, NULL, NULL);
 
 	ImGui::End();

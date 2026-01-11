@@ -62,8 +62,8 @@ public:
 	Transform* getTransform() { return gameObject->getTransform(); }
 	Vector3* getObjectPosition() { return &gameObject->getTransform()->position; }
 	void setObjectPosition(const Vector3 position) { gameObject->getTransform()->position = position; }
-	Vector3* getObjectRotation() { return &gameObject->getTransform()->rotation; }
-	void setObjectRotation(const Vector3 rotation) { gameObject->getTransform()->rotation = rotation; }
+	Quaternion* getObjectRotation() { return &gameObject->getTransform()->rotation; }
+	void setObjectRotation(const Quaternion rotation) { gameObject->getTransform()->rotation = rotation; }
 	Vector3* getObjectScale() { return &gameObject->getTransform()->scale; }
 	void setObjectScale(const Vector3 scale) { gameObject->getTransform()->scale = scale; }
 

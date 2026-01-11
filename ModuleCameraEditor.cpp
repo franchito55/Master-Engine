@@ -17,7 +17,7 @@ ModuleCameraEditor::ModuleCameraEditor(HWND hWnd) {}
 
 bool ModuleCameraEditor::init() {
 	app->setModuleCamera(this); transform.position = Vector3(1.0f, 1.5f, 3.0f);
-	transform.rotation = Vector3(0.0f, 0.0f, 0.0f);
+	transform.rotation = Quaternion::Identity;
 	transform.forward = target - transform.position;
 	transform.forward.Normalize();
 	transform.up = Vector3(0.0f, 1.0f, 0.0f);
@@ -210,7 +210,7 @@ void ModuleCameraEditor::recalculateRight() {
 
 void ModuleCameraEditor::resetState() {
 	transform.position = Vector3(0.0f, 3.0f, 7.0f);
-	transform.rotation = Vector3(0.0f, 0.0f, 0.0f);
+	transform.rotation = Quaternion::Identity;
 	transform.forward = Vector3(0.0f, 0.0f, -1.0f);
 	transform.up = Vector3(0.0f, 1.0f, 0.0f);
 	recalculateRight();
