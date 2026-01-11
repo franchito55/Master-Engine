@@ -117,8 +117,8 @@ void ModuleImGui::showTextureInfoWindow() {
 void ModuleImGui::showGeometryInfoWindow() {
 	// ============ Geometry info window ============
 	ImGui::Begin("Geometry");
-	Matrix cameraViewMatrix = moduleCamera->GetViewMatrix();
-	Matrix cameraProjectionMatrix = moduleCamera->GetProjectionMatrix();
+	Matrix cameraViewMatrix = moduleCamera->getViewMatrix();
+	Matrix cameraProjectionMatrix = moduleCamera->getProjectionMatrix();
 	Matrix* model = app->getModuleAssignment2()->getModelMatrix();
 
 	if (ImGui::IsKeyPressed(ImGuiKey_T))
@@ -189,7 +189,7 @@ void ModuleImGui::showDebugGizmosWindow() {
 		dd::xzSquareGrid(-20.0f, 20.0f, 0.0f, 1.0f, dd::colors::LightGray);
 	if (showAxisTriad) {
 		// To avoid z-fighting between axis and grid. Axis lines always drawn on top
-		Vector3 nudge = moduleCamera->GetTransform().position;
+		Vector3 nudge = moduleCamera->getTransform().position;
 		nudge.Normalize();
 		Matrix axisPos = Matrix::CreateTranslation(nudge * 0.001f);
 		dd::axisTriad(ddConvert(axisPos), 0.05f, 0.5f);
@@ -232,9 +232,9 @@ void ModuleImGui::showConsoleWindow() {
 }
 
 void ModuleImGui::showCameraInfoWindow() {
-	Vector3 cameraPos = moduleCamera->GetTransform().position;
-	Vector3 cameraForward = moduleCamera->GetTransform().forward;
-	Vector3 cameraUp = moduleCamera->GetTransform().up;
+	Vector3 cameraPos = moduleCamera->getTransform().position;
+	Vector3 cameraForward = moduleCamera->getTransform().forward;
+	Vector3 cameraUp = moduleCamera->getTransform().up;
 	Vector3 cameraTarget = moduleCamera->getTarget();
 	float cameraOrbitingDist = moduleCamera->getCurrentOrbitingDistance();
 
@@ -333,8 +333,8 @@ void ModuleImGui::showSceneRenderWindow() {
 	ImGui::Image((ImTextureID)app->getModuleShaderDescriptors()->getGPUHandleFromGenericHeap(app->getModuleD3D12()->getSceneSRVIndexInHeap()).ptr, sceneRenderWindowSize);
 
 	// Gizmo
-	Matrix cameraViewMatrix = moduleCamera->GetViewMatrix();
-	Matrix cameraProjectionMatrix = moduleCamera->GetProjectionMatrix();
+	Matrix cameraViewMatrix = moduleCamera->getViewMatrix();
+	Matrix cameraProjectionMatrix = moduleCamera->getProjectionMatrix();
 	Matrix* model = app->getModuleAssignment2()->getModelMatrix();
 	ImGuizmo::SetRect(
 		sceneRenderWindowPos.x + sceneRenderWindowImageRectMin.x,

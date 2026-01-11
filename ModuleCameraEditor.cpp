@@ -21,7 +21,7 @@ bool ModuleCameraEditor::init() {
 	transform.forward = target - transform.position;
 	transform.forward.Normalize();
 	transform.up = Vector3(0.0f, 1.0f, 0.0f);
-	recalculateRight();
+	transform.right = transform.forward.Cross(transform.up);
 	currentOrbitingDistance = (target - transform.position).Length();
 
 	imGuiPos = transform.position;
@@ -71,7 +71,7 @@ void ModuleCameraEditor::update() {
 			transform.up = Vector3::Transform(transform.up, rotationDelta);
 			Vector3 rotatedOffset = Vector3::Transform(offset, rotationDelta);
 			transform.position = target + rotatedOffset;
-			recalculateRight();
+			transform.right = transform.forward.Cross(transform.up);
 		}
 
 		if (mouseDeltaX != 0) {
@@ -81,7 +81,7 @@ void ModuleCameraEditor::update() {
 			transform.up = Vector3::Transform(transform.up, rotationDelta);
 			Vector3 rotatedOffset = Vector3::Transform(offset, rotationDelta);
 			transform.position = target + rotatedOffset;
-			recalculateRight();
+			transform.right = transform.forward.Cross(transform.up);
 		}
 	}
 
@@ -115,7 +115,7 @@ void ModuleCameraEditor::update() {
 		// Normalize everything just in case
 		transform.forward.Normalize();
 		transform.up.Normalize();
-		recalculateRight();
+		transform.right = transform.forward.Cross(transform.up);
 		transform.right.Normalize();
 
 		// Compute the movement difference
@@ -160,20 +160,27 @@ void ModuleCameraEditor::update() {
 void ModuleCameraEditor::render() {
 
 	// Recalculate target in case the user has changed the camera's values via ImGui
-	if (posUpdatedViaImGui || forwardUpdatedViaImGui || upUpdatedViaImGui) {
-		imGuiForward.Normalize();
-		transform.forward = imGuiForward;
-		imGuiUp.Normalize();
-		transform.up = imGuiUp;
-		recalculateRight();
-		target = imGuiPos + imGuiForward * currentOrbitingDistance;
+	if (posUpdatedViaImGui) {
+		target = imGuiPos + transform.forward * currentOrbitingDistance;
 		transform.position = imGuiPos;
 
 		posUpdatedViaImGui = false;
+	}
+	else if (forwardUpdatedViaImGui) {
+		imGuiForward.Normalize();
+		transform.forward = imGuiForward;
+		transform.right = transform.forward.Cross(transform.up);
+		target = transform.position + transform.forward * currentOrbitingDistance;
 		forwardUpdatedViaImGui = false;
+	}
+	else if (upUpdatedViaImGui) {
+		imGuiUp.Normalize();
+		transform.up = imGuiUp;
+		transform.right = transform.forward.Cross(transform.up);
 		upUpdatedViaImGui = false;
-	} else if (targetUpdatedViaImGui) {
-		transform.forward = imGuiTarget - imGuiPos;
+	}
+	else if (targetUpdatedViaImGui) {
+		transform.forward = imGuiTarget - transform.position;
 		transform.forward.Normalize();
 		transform.right = transform.forward.Cross(Vector3(0.0f, 1.0f, 0.0f));
 		transform.right.Normalize();
@@ -204,16 +211,12 @@ void ModuleCameraEditor::render() {
     );
 }
 
-void ModuleCameraEditor::recalculateRight() {
-	transform.right = transform.forward.Cross(transform.up);
-}
-
 void ModuleCameraEditor::resetState() {
 	transform.position = Vector3(0.0f, 3.0f, 7.0f);
 	transform.rotation = Quaternion::Identity;
 	transform.forward = Vector3(0.0f, 0.0f, -1.0f);
 	transform.up = Vector3(0.0f, 1.0f, 0.0f);
-	recalculateRight();
+	transform.right = transform.forward.Cross(transform.up);
 }
 
 bool ModuleCameraEditor::anySignsDiffer(Vector3 position1, Vector3 position2) {

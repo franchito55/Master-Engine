@@ -73,7 +73,7 @@ void ModuleAssignment2::render() {
 	model = Matrix::CreateScale(gameObject->getTransform()->scale) *
 		Matrix::CreateFromQuaternion(gameObject->getTransform()->rotation) *
 		Matrix::CreateTranslation(gameObject->getTransform()->position);
-	mvp = (model * app->getModuleCamera()->GetViewMatrix() * app->getModuleCamera()->GetProjectionMatrix()).Transpose();
+	mvp = (model * app->getModuleCamera()->getViewMatrix() * app->getModuleCamera()->getProjectionMatrix()).Transpose();
 
 	ComPtr<ID3D12GraphicsCommandList> commandList = app->getModuleD3D12()->getCurrentBufferCommandList();
 
@@ -116,7 +116,7 @@ void ModuleAssignment2::render() {
 	};
 	commandList->SetGraphicsRootConstantBufferView(2, normalCB->GetGPUVirtualAddress());
 
-	cameraData->cameraPos = app->getModuleCamera()->GetTransform().position;
+	cameraData->cameraPos = app->getModuleCamera()->getTransform().position;
 	commandList->SetGraphicsRootConstantBufferView(4, cameraCB->GetGPUVirtualAddress());
 
 	materialData->materialN = pbrMaterialN;
@@ -149,7 +149,7 @@ void ModuleAssignment2::render() {
 	commandList->DrawIndexedInstanced(gameObject->getMesh()->getNumIndices(), 1, 0, 0, 0);
 
 	// Draw debug info last so it's on top
-	debugDrawPass->record(commandList.Get(), app->getSceneRenderWindowWidth(), app->getSceneRenderWindowHeight(), app->getModuleCamera()->GetViewMatrix(), app->getModuleCamera()->GetProjectionMatrix());
+	debugDrawPass->record(commandList.Get(), app->getSceneRenderWindowWidth(), app->getSceneRenderWindowHeight(), app->getModuleCamera()->getViewMatrix(), app->getModuleCamera()->getProjectionMatrix());
 
 	barrier = CD3DX12_RESOURCE_BARRIER::Transition(
 		app->getModuleD3D12()->getSceneRenderTexture(),                  // the texture resource
@@ -309,7 +309,7 @@ GameObject* ModuleAssignment2::createGameObjectFromGLTF(unsigned int meshIndex, 
 	// Init the camera matrices
 	Matrix model = Matrix::CreateScale(gO->getTransform()->scale) * Matrix::CreateTranslation(gO->getTransform()->position);
 
-	mvp = (model * app->getModuleCamera()->GetViewMatrix() * app->getModuleCamera()->GetProjectionMatrix()).Transpose();
+	mvp = (model * app->getModuleCamera()->getViewMatrix() * app->getModuleCamera()->getProjectionMatrix()).Transpose();
 
 	return gO;
 }

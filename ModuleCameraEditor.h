@@ -8,9 +8,9 @@ struct Transform;
 class ModuleCameraEditor : public Module {
 public:
 	ModuleCameraEditor(HWND hWnd);
-	Transform GetTransform() const { return transform; }
-	Matrix GetViewMatrix() const { return view; }
-	Matrix GetProjectionMatrix() const { return projection; }
+	Transform getTransform() const { return transform; }
+	Matrix getViewMatrix() const { return view; }
+	Matrix getProjectionMatrix() const { return projection; }
 	Vector3 getTarget() const { return target; }
 	float getCurrentOrbitingDistance() { return currentOrbitingDistance; }
 	float* getFov() { return &fov; }
@@ -22,7 +22,6 @@ public:
 	void update() override;
 	void render() override;
 
-	void recalculateRight();
 	void resetState();
 
 	void setPosUpdatedViaImGui(const bool updated) { posUpdatedViaImGui = updated; }
