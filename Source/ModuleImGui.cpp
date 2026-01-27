@@ -52,6 +52,7 @@ void ModuleImGui::render() {
 	showMaterialInfoWindow();
 	showSceneRenderWindow();
 	showGeometryInfoWindow();
+	showSceneTreeWindow(&_testScene);
 
 	fpsCount++;
 
@@ -348,6 +349,69 @@ void ModuleImGui::showSceneRenderWindow() {
 	ImGuizmo::Manipulate(&cameraViewMatrix._11, &cameraProjectionMatrix._11, mCurrentGizmoOperation, mCurrentGizmoMode, &model->_11, NULL, NULL);
 
 	ImGui::End();
+}
+
+void ModuleImGui::showSceneTreeWindow(Scene* scene)
+{
+	for (unsigned int i = 0; i < scene->objects.size(); i++)
+	{
+		recursiveImGuiSceneTree(scene->objects.at(i));
+	}
+}
+
+void ModuleImGui::recursiveImGuiSceneTree(SceneNode* node) 
+{
+	if (node->children.size() == 0) 
+	{
+		ImGui::Text(node->name.c_str());
+	}
+	else
+	{
+		if (ImGui::TreeNode(node->name.c_str()))
+		{
+			for (unsigned int i = 0; i < node->children.size(); i++)
+			{
+				recursiveImGuiSceneTree(node->children.at(i));
+			}
+			ImGui::TreePop();
+		}
+	}
+}
+
+void ModuleImGui::initSceneTest()
+{
+	SceneNode snChild0 = {};
+	snChild0.name = "Child 0";
+	SceneNode snChild1 = {};
+	snChild1.name = "Child 1";
+	SceneNode snChild2 = {};
+	snChild2.name = "Child 2";
+	SceneNode snParent0 = {};
+	snParent0.name = "Parent 0";
+	snParent0.children.push_back(&snChild0);
+	snParent0.children.push_back(&snChild1);
+	snParent0.children.push_back(&snChild2);
+	snChild0.parent = &snParent0;
+	snChild1.parent = &snParent0;
+	snChild2.parent = &snParent0;
+
+	SceneNode snChild3 = {};
+	snChild3.name = "Child 3";
+	SceneNode snChild4 = {};
+	snChild4.name = "Child 4";
+	SceneNode snBaby0 = {};
+	snBaby0.name = "Baby 0";
+	SceneNode snParent1 = {};
+	snParent1.name = "Parent 1";
+	snParent1.children.push_back(&snChild3);
+	snParent1.children.push_back(&snChild4);
+	snChild3.children.push_back(&snBaby0);
+	snChild3.parent = &snParent1;
+	snChild4.parent = &snParent1;
+	snBaby0.parent = &snChild3;
+
+	_testScene.objects.push_back(&snParent0);
+	_testScene.objects.push_back(&snParent1);
 }
 
 bool ModuleImGui::compareVectors(float* v0, float* v1) {
