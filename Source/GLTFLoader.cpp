@@ -13,7 +13,11 @@
 #include "ModuleD3D12.h"
 #include "Material.h"
 
+#if defined(_DEBUG)
 #define ASSETS_RELATIVE_PATH "../"
+#else
+#define ASSETS_RELATIVE_PATH "/resources/"
+#endif
 
 extern Application* app;
 

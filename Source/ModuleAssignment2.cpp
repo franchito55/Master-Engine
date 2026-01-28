@@ -14,8 +14,15 @@
 #include "ImGuizmo.h"
 #include "ModuleShaderDescriptors.h"
 #include "ModuleNonShaderDescriptors.h"
+#include "ModuleImGui.h"
 
 #define PI 3.14159265359
+
+#if defined(_DEBUG)
+#define ASSETS_RELATIVE_PATH "../"
+#else
+#define ASSETS_RELATIVE_PATH "/resources/"
+#endif
 
 ModuleAssignment2::ModuleAssignment2(HWND _hWnd) : hWnd(_hWnd) {}
 
@@ -24,7 +31,7 @@ bool ModuleAssignment2::init() {
 	app->setModuleAssignment2(this);
 
 	// Read the vertex and index buffers and the texture from GLTF and pack them into a GameObject
-	gameObject = createGameObjectFromGLTF(0, 0);
+	gameObject = createGameObjectFromGLTF("Duck.gltf", 0, 0);
 	// The duck is HUGE for some reason (hundreds of units big)
 	gameObject->getTransform()->scale = Vector3(0.01f, 0.01f, 0.01f);
 
@@ -270,16 +277,18 @@ void ModuleAssignment2::buildPSO() {
 	device->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&pso));
 }
 
-GameObject* ModuleAssignment2::createGameObjectFromGLTF(unsigned int meshIndex, unsigned int primitiveIndex) {
+GameObject* ModuleAssignment2::createGameObjectFromGLTF(const std::string fileName, unsigned int meshIndex, unsigned int primitiveIndex) {
 	GameObject* gO = new GameObject();
 
 	// =================== Load model using GLTF ===================
 	tinygltf::TinyGLTF tinyGLTF;
 	tinygltf::Model tinyGLTFModel;
 	std::string error, warning;
-	tinyGLTF.LoadASCIIFromFile(&tinyGLTFModel, &error, &warning, "../Duck.gltf");
+	const std::string filePath = ASSETS_RELATIVE_PATH + fileName;
+	tinyGLTF.LoadASCIIFromFile(&tinyGLTFModel, &error, &warning, filePath);
 	if (error != "") {
-		MessageBoxA(hWnd, "Cannot find file", "Error loading GLTF file", 0);
+		MessageBoxA(hWnd, ("Cannot find file: " + filePath).c_str(), "Error loading GLTF file", 0);
+		exit(500);
 	}
 
 	// Load vertices from GLTF

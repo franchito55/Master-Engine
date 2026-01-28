@@ -147,5 +147,5 @@ private:
 
 	D3D12_FILTER imGuiFilteringToDX12(unsigned int imGuiIndex);
 	D3D12_TEXTURE_ADDRESS_MODE imGuiAddressingToDX12(unsigned int imGuiIndex);
-	GameObject* createGameObjectFromGLTF(unsigned int meshIndex, unsigned int primitiveIndex);
+	GameObject* createGameObjectFromGLTF(const std::string fileName, unsigned int meshIndex, unsigned int primitiveIndex);
 };
