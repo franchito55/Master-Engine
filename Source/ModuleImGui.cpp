@@ -123,17 +123,17 @@ void ModuleImGui::showGeometryInfoWindow() {
 
 	if (ImGui::IsKeyPressed(ImGuiKey_T))
 		mCurrentGizmoOperation = ImGuizmo::TRANSLATE;
-	if (ImGui::IsKeyPressed(ImGuiKey_E))
-		mCurrentGizmoOperation = ImGuizmo::ROTATE;
 	if (ImGui::IsKeyPressed(ImGuiKey_R))
+		mCurrentGizmoOperation = ImGuizmo::ROTATE;
+	if (ImGui::IsKeyPressed(ImGuiKey_E))
 		mCurrentGizmoOperation = ImGuizmo::SCALE;
-	if (ImGui::RadioButton("Translate", mCurrentGizmoOperation == ImGuizmo::TRANSLATE))
+	if (ImGui::RadioButton("Translate [T]", mCurrentGizmoOperation == ImGuizmo::TRANSLATE))
 		mCurrentGizmoOperation = ImGuizmo::TRANSLATE;
 	ImGui::SameLine();
-	if (ImGui::RadioButton("Rotate", mCurrentGizmoOperation == ImGuizmo::ROTATE))
+	if (ImGui::RadioButton("Rotate [R]", mCurrentGizmoOperation == ImGuizmo::ROTATE))
 		mCurrentGizmoOperation = ImGuizmo::ROTATE;
 	ImGui::SameLine();
-	if (ImGui::RadioButton("Scale", mCurrentGizmoOperation == ImGuizmo::SCALE))
+	if (ImGui::RadioButton("Scale [E]", mCurrentGizmoOperation == ImGuizmo::SCALE))
 		mCurrentGizmoOperation = ImGuizmo::SCALE;
 
 	Vector3* position = app->getModuleAssignment2()->getObjectPosition();

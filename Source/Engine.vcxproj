@@ -193,7 +193,6 @@
     <ClInclude Include="ModuleInput.h" />
     <ClInclude Include="ModuleNonShaderDescriptors.h" />
     <ClInclude Include="ModuleResources.h" />
-    <ClInclude Include="ModuleRingBuffer.h" />
     <ClInclude Include="ModuleShaderDescriptors.h" />
     <ClInclude Include="Mouse.h" />
     <ClInclude Include="PlatformHelpers.h" />
@@ -294,7 +293,6 @@
     <ClCompile Include="ModuleInput.cpp" />
     <ClCompile Include="ModuleNonShaderDescriptors.cpp" />
     <ClCompile Include="ModuleResources.cpp" />
-    <ClCompile Include="ModuleRingBuffer.cpp" />
     <ClCompile Include="ModuleShaderDescriptors.cpp" />
     <ClCompile Include="Mouse.cpp" />
     <ClCompile Include="SimpleMath.cpp">
