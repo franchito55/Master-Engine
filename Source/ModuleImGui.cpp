@@ -28,6 +28,8 @@ bool ModuleImGui::init() {
 	sceneRenderWindowSize = { 400, 400 };
 	uiRotationDeg = app->getModuleAssignment2()->getObjectRotation()->ToEuler() * RAD2DEG;
 
+	initImGuiSceneTree();
+
 	// ============ Init ImGui wrapper ============
 	imGuiPass = new ImGuiPass(moduleD3D12->getDevice().Get(), hWnd, {0}, {0});
 
@@ -52,6 +54,9 @@ void ModuleImGui::render() {
 	showMaterialInfoWindow();
 	showSceneRenderWindow();
 	showGeometryInfoWindow();
+	showSceneTreeWindow();
+
+	ImGui::ShowDemoWindow();
 
 	fpsCount++;
 
@@ -350,6 +355,205 @@ void ModuleImGui::showSceneRenderWindow() {
 	ImGui::End();
 }
 
-bool ModuleImGui::compareVectors(float* v0, float* v1) {
+bool ModuleImGui::compareVectors(float* v0, float* v1) 
+{
 	return v0[0] == v1[0] && v0[1] == v1[1] && v0[2] == v1[2];
+}
+
+/*struct ExampleTreeFuncs
+{
+	static void DrawNode(SceneNode* node, ImGuiSelectionBasicStorage* selection)
+	{
+		ImGuiTreeNodeFlags tree_node_flags = ImGuiTreeNodeFlags_SpanAvailWidth | ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_OpenOnDoubleClick;
+		tree_node_flags |= ImGuiTreeNodeFlags_NavLeftJumpsToParent; // Enable pressing left to jump to parent
+		if (node->children.size() == 0)
+			tree_node_flags |= ImGuiTreeNodeFlags_Bullet | ImGuiTreeNodeFlags_Leaf;
+		if (selection->Contains((ImGuiID)node->UID))
+			tree_node_flags |= ImGuiTreeNodeFlags_Selected;
+
+		// Using SetNextItemStorageID() to specify storage id, so we can easily peek into
+		// the storage holding open/close stage, using our TreeNodeGetOpen/TreeNodeSetOpen() functions.
+		ImGui::SetNextItemSelectionUserData((ImGuiSelectionUserData)(intptr_t)node);
+		ImGui::SetNextItemStorageID((ImGuiID)node->UID);
+		if (ImGui::TreeNodeEx(node->name, tree_node_flags))
+		{
+			for (SceneNode* child : node->children)
+				DrawNode(child, selection);
+			ImGui::TreePop();
+		}
+		else if (ImGui::IsItemToggledOpen())
+		{
+			TreeCloseAndUnselectChildNodes(node, selection);
+		}
+	}
+
+	static bool TreeNodeGetOpen(SceneNode* node)
+	{
+		return ImGui::GetStateStorage()->GetBool((ImGuiID)node->UID);
+	}
+
+	static void TreeNodeSetOpen(SceneNode* node, bool open)
+	{
+		ImGui::GetStateStorage()->SetBool((ImGuiID)node->UID, open);
+	}
+
+	// When closing a node: 1) close and unselect all child nodes, 2) select parent if any child was selected.
+	// FIXME: This is currently handled by user logic but I'm hoping to eventually provide tree node
+	// features to do this automatically, e.g. a ImGuiTreeNodeFlags_AutoCloseChildNodes etc.
+	static int TreeCloseAndUnselectChildNodes(SceneNode* node, ImGuiSelectionBasicStorage* selection, int depth = 0)
+	{
+		// Recursive close (the test for depth == 0 is because we call this on a node that was just closed!)
+		int unselected_count = selection->Contains((ImGuiID)node->UID) ? 1 : 0;
+		if (depth == 0 || TreeNodeGetOpen(node))
+		{
+			for (SceneNode* child : node->children)
+				unselected_count += TreeCloseAndUnselectChildNodes(child, selection, depth + 1);
+			TreeNodeSetOpen(node, false);
+		}
+
+		// Select root node if any of its child was selected, otherwise unselect
+		selection->SetItemSelected((ImGuiID)node->UID, (depth == 0 && unselected_count > 0));
+		return unselected_count;
+	}
+
+	// Apply multi-selection requests
+	static void ApplySelectionRequests(ImGuiMultiSelectIO* ms_io, SceneNode* tree, ImGuiSelectionBasicStorage* selection)
+	{
+		for (ImGuiSelectionRequest& req : ms_io->Requests)
+		{
+			if (req.Type == ImGuiSelectionRequestType_SetAll)
+			{
+				if (req.Selected)
+					TreeSetAllInOpenNodes(tree, selection, req.Selected);
+				else
+					selection->Clear();
+			}
+			else if (req.Type == ImGuiSelectionRequestType_SetRange)
+			{
+				SceneNode* first_node = (SceneNode*)(intptr_t)req.RangeFirstItem;
+				SceneNode* last_node = (SceneNode*)(intptr_t)req.RangeLastItem;
+				for (SceneNode* node = first_node; node != NULL; node = TreeGetNextNodeInVisibleOrder(node, last_node))
+					selection->SetItemSelected((ImGuiID)node->UID, req.Selected);
+			}
+		}
+	}
+
+	static void TreeSetAllInOpenNodes(SceneNode* node, ImGuiSelectionBasicStorage* selection, bool selected)
+	{
+		if (node->parent != NULL) // Root node isn't visible nor selectable in our scheme
+			selection->SetItemSelected((ImGuiID)node->UID, selected);
+		if (node->parent == NULL || TreeNodeGetOpen(node))
+			for (SceneNode* child : node->children)
+				TreeSetAllInOpenNodes(child, selection, selected);
+	}
+
+	// Interpolate in *user-visible order* AND only *over opened nodes*.
+	// If you have a sequential mapping tables (e.g. generated after a filter/search pass) this would be simpler.
+	// Here the tricks are that:
+	// - we store/maintain ExampleTreeNode::IndexInParent which allows implementing a linear iterator easily, without searches, without recursion.
+	//   this could be replaced by a search in parent, aka 'int index_in_parent = curr_node->Parent->Childs.find_index(curr_node)'
+	//   which would only be called when crossing from child to a parent, aka not too much.
+	// - we call SetNextItemStorageID() before our TreeNode() calls with an ID which doesn't relate to UI stack,
+	//   making it easier to call TreeNodeGetOpen()/TreeNodeSetOpen() from any location.
+	static SceneNode* TreeGetNextNodeInVisibleOrder(SceneNode* curr_node, SceneNode* last_node)
+	{
+		// Reached last node
+		if (curr_node == last_node)
+			return NULL;
+
+		// Recurse into childs. Query storage to tell if the node is open.
+		if (curr_node->children.size() > 0 && TreeNodeGetOpen(curr_node))
+			return curr_node->children.at(0);
+
+		// Next sibling, then into our own parent
+		while (curr_node->parent != NULL)
+		{
+			if (curr_node->indexInParent + 1 < curr_node->parent->children.size())
+				return curr_node->parent->children.at(curr_node->indexInParent + 1);
+			curr_node = curr_node->parent;
+		}
+		return NULL;
+	}
+
+}; // ExampleTreeFuncs
+*/
+
+void ModuleImGui::showSceneTreeWindow() 
+{
+	ImGui::Begin("Scene Tree");
+	/*static ImGuiSelectionBasicStorage selection;
+	ImGui::Text("Selection size: %d", selection.Size);
+
+	if (ImGui::BeginChild("##Tree", ImVec2(-FLT_MIN, ImGui::GetFontSize() * 20), ImGuiChildFlags_FrameStyle | ImGuiChildFlags_ResizeY))
+	{
+		SceneNode* tree = _scene->root;
+		ImGuiMultiSelectFlags ms_flags = ImGuiMultiSelectFlags_ClearOnEscape | ImGuiMultiSelectFlags_BoxSelect2d;
+		ImGuiMultiSelectIO* ms_io = ImGui::BeginMultiSelect(ms_flags, selection.Size, -1);
+		ExampleTreeFuncs::ApplySelectionRequests(ms_io, tree, &selection);
+		for (SceneNode* node : tree->children)
+			ExampleTreeFuncs::DrawNode(node, &selection);
+		ms_io = ImGui::EndMultiSelect();
+		ExampleTreeFuncs::ApplySelectionRequests(ms_io, tree, &selection);
+	}
+	ImGui::EndChild();*/
+
+	drawImGuiSceneNodeRecursive(_scene->root);
+
+	ImGui::End();
+}
+
+void ModuleImGui::initImGuiSceneTree() 
+{
+	SceneNode* snGParent0 = new SceneNode();
+	snGParent0->name = "GrandParent 0";
+	SceneNode* snParent0 = new SceneNode();
+	snParent0->name = "Parent 0";
+	SceneNode* snChild0 = new SceneNode();
+	snChild0->name = "Child 0";
+	SceneNode* snChild1 = new SceneNode();
+	snChild1->name = "Child 1";
+	snParent0->children.push_back(snChild0);
+	snParent0->children.push_back(snChild1);
+	SceneNode* snParent1 = new SceneNode();
+	snParent1->name = "Parent 1";
+	SceneNode* snChild2 = new SceneNode();
+	snChild2->name = "Child 2";
+	SceneNode* snBaby0 = new SceneNode();
+	snBaby0->name = "Baby 0";
+	snChild2->children.push_back(snBaby0);
+	SceneNode* snChild3 = new SceneNode();
+	snChild3->name = "Child 3";
+	SceneNode* snBaby1 = new SceneNode();
+	snBaby1->name = "Baby 1";
+	SceneNode* snBaby2 = new SceneNode();
+	snBaby2->name = "Baby 2";
+	snChild3->children.push_back(snBaby1);
+	snChild3->children.push_back(snBaby2);
+	SceneNode* snChild4 = new SceneNode();
+	snChild4->name = "Child 4";
+	snParent1->children.push_back(snChild2);
+	snParent1->children.push_back(snChild3);
+	snParent1->children.push_back(snChild4);
+	snGParent0->children.push_back(snParent0);
+	snGParent0->children.push_back(snParent1);
+	_scene = new Scene();
+	_scene->root = snGParent0;
+}
+
+
+void ModuleImGui::drawImGuiSceneNodeRecursive(SceneNode* node)
+{
+	if (node->children.size() == 0) 
+	{
+		ImGui::Text(node->name);
+	}
+	else 
+	{
+		if (ImGui::TreeNode(node->name)) {
+			for (unsigned int i = 0; i < node->children.size(); i++) {
+				drawImGuiSceneNodeRecursive(node->children.at(i));
+			}
+			ImGui::TreePop();
+		}
+	}
 }

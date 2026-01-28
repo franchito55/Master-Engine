@@ -9,6 +9,23 @@ class ImGuiPass;
 class ModuleD3D12;
 class ModuleCameraEditor;
 
+struct SceneNode {
+	const char* name;
+	int                         UID = 0;
+	SceneNode* parent;
+	std::vector<SceneNode*> children;
+	int indexInParent = 0;
+	~SceneNode() {
+		for (unsigned int i = 0; i < children.size(); i++) {
+			delete children.at(i);
+		}
+	}
+};
+
+struct Scene {
+	SceneNode* root;
+};
+
 class ModuleImGui : public Module {
 public:
 	ModuleImGui(HWND _hWnd) : hWnd(_hWnd) {};
@@ -74,6 +91,12 @@ private:
 	void showConsoleWindow();
 	void showCameraInfoWindow();
 	void showSceneRenderWindow();
+	
+	// ======== Scene test ========
+	void showSceneTreeWindow();
+	void initImGuiSceneTree();
+	void drawImGuiSceneNodeRecursive(SceneNode* node);
+	Scene* _scene;
 
 	bool compareVectors(float* v0, float* v1);
 };
