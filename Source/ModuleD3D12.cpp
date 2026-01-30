@@ -99,6 +99,7 @@ void ModuleD3D12::postRender() {
 }
 
 void ModuleD3D12::flush() {
+	fenceValues[currentBackBufferIndex] += FRAME_BUFFER_NUM;
 	renderCommandQueue->Signal(fence.Get(), fenceValues[currentBackBufferIndex]);
 	// Set fenceEvent as "completed" when the fence's value == frameCounter
 	fence->SetEventOnCompletion(fenceValues[currentBackBufferIndex], fenceEvent);
@@ -110,6 +111,7 @@ void ModuleD3D12::flush() {
 
 // Flushes a specific command queue (for example the copy one)
 void ModuleD3D12::flush(ID3D12CommandQueue* commandQueue) {
+	fenceValues[currentBackBufferIndex] += FRAME_BUFFER_NUM;
 	commandQueue->Signal(fence.Get(), fenceValues[currentBackBufferIndex]);
 	// Set fenceEvent as "completed" when the fence's value == frameCounter
 	fence->SetEventOnCompletion(fenceValues[currentBackBufferIndex], fenceEvent);

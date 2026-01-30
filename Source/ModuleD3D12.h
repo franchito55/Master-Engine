@@ -62,7 +62,7 @@ private:
 	ComPtr<ID3D12Resource2> depthStencilBuffer;
 	unsigned int currentBackBufferIndex = 0;
 	ComPtr<ID3D12Fence1> fence;
-	unsigned int fenceValues[FRAME_BUFFER_NUM] = { 0, 0 };
+	unsigned int fenceValues[FRAME_BUFFER_NUM] = { 0, 0, 0 };
 	HANDLE fenceEvent;
 	float red = 1.0f;
 	float green = 0.0f;
