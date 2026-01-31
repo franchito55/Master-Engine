@@ -1,0 +1,2 @@
+C:\Users\Fran\Documents\Master\C++ for Video Games\Engine\Engine\Source\3rdParty\DirectXTex\Bin\Desktop_2022_Win10\x64\Debug\DirectXTex.lib
+C:\Users\Fran\Documents\Master\C++ for Video Games\Engine\Source\3rdParty\DirectXTex\Bin\Desktop_2022_Win10\x64\Debug\DirectXTex.lib
