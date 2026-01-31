@@ -29,7 +29,8 @@ bool ModuleImGui::init() {
 	uiRotationDeg = app->getModuleAssignment2()->getObjectRotation()->ToEuler() * RAD2DEG;
 
 	// ============ Init ImGui wrapper ============
-	imGuiPass = new ImGuiPass(moduleD3D12->getDevice().Get(), hWnd, {0}, {0});
+	unsigned int descriptorsIndex = app->getModuleShaderDescriptors()->allocateDescriptor();
+	imGuiPass = new ImGuiPass(moduleD3D12->getDevice().Get(), hWnd, app->getModuleShaderDescriptors()->getCPUHandleFromGenericHeap(descriptorsIndex), app->getModuleShaderDescriptors()->getGPUHandleFromGenericHeap(descriptorsIndex));
 
 	return true;
 }

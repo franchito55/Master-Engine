@@ -1,5 +1,8 @@
 #pragma once
 
+class Application;
+
+extern Application* app;
 
 class ImGuiPass
 {

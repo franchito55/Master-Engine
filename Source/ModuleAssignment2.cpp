@@ -148,10 +148,11 @@ void ModuleAssignment2::render() {
 
 	commandList->IASetPrimitiveTopology(D3D10_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
-	ID3D12DescriptorHeap* srvHeap[1] = {app->getModuleShaderDescriptors()->getDescriptorHeap()};
-	commandList->SetDescriptorHeaps(1, srvHeap);
+	ID3D12DescriptorHeap* srvHeap = app->getModuleShaderDescriptors()->getDescriptorHeap();
+	ID3D12DescriptorHeap* srvHeaps[1] = {srvHeap};
+	commandList->SetDescriptorHeaps(1, srvHeaps);
 	
-	commandList->SetGraphicsRootDescriptorTable(3, app->getModuleShaderDescriptors()->getDescriptorHeap()->GetGPUDescriptorHandleForHeapStart());
+	commandList->SetGraphicsRootDescriptorTable(3, srvHeap->GetGPUDescriptorHandleForHeapStart());
 
 	commandList->DrawIndexedInstanced(gameObject->getMesh()->getNumIndices(), 1, 0, 0, 0);
 
@@ -342,11 +343,11 @@ void ModuleAssignment2::initConstantBufferViews() {
 	app->getModuleResources()->createUploadBuffer(cameraCB, sizeof(CameraCB));
 	cameraCB->Map(0, nullptr, reinterpret_cast<void**>(&cameraData));
 
-	// Create and map once MvpCB (this would normally be on the Light --> move to Light)
+	// Create and map once lightCB (this would normally be on the Light --> move to Light)
 	app->getModuleResources()->createUploadBuffer(lightCB, sizeof(LightCB));
 	lightCB->Map(0, nullptr, reinterpret_cast<void**>(&lightData));
 
-	// Create and map once MvpCB
+	// Create and map once materialCB
 	app->getModuleResources()->createUploadBuffer(materialCB, sizeof(MaterialCB));
 	materialCB->Map(0, nullptr, reinterpret_cast<void**>(&materialData));
 }

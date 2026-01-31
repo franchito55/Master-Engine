@@ -80,7 +80,7 @@ private:
 	RECT windowResizedRect = {};
 	RECT sceneResizedRect = {};
 
-	float color[3] = { 0.2f, 0.2f, 0.2f };
+	float color[3] = { 1.0f, 1.0f, 1.0f };
 
 	unsigned int frameIndex = 0;
 

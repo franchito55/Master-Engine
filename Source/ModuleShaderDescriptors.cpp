@@ -44,7 +44,6 @@ bool ModuleShaderDescriptors::init() {
 }
 
 unsigned int ModuleShaderDescriptors::createGenericSRV(ID3D12Resource* resource, DXGI_FORMAT format, unsigned int mipLevels) {
-	// 1. Reserve (?) next free slot
 	D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
 	srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
 	srvDesc.Format = format;
@@ -53,7 +52,7 @@ unsigned int ModuleShaderDescriptors::createGenericSRV(ID3D12Resource* resource,
 	srvDesc.Texture2D.MostDetailedMip = 0;
 	srvDesc.Texture2D.ResourceMinLODClamp = 0.0f;
 
-	unsigned int index = nextFreeGenericIndex++;
+	unsigned int index = allocateDescriptor();
 	D3D12_CPU_DESCRIPTOR_HANDLE cpuDescriptorHandle = getCPUHandleFromGenericHeap(index);
 
 	device->CreateShaderResourceView(resource, &srvDesc, cpuDescriptorHandle);
@@ -69,9 +68,9 @@ unsigned int ModuleShaderDescriptors::createSampler(D3D12_SAMPLER_DESC* samplerD
 }
 
 unsigned int ModuleShaderDescriptors::allocateDescriptor() {
-	// 1. Reserve (?) next free slot
-	// 2. Update next free index to +1
-	return 0;
+	int currIndex = nextFreeGenericIndex;
+	nextFreeGenericIndex++;
+	return currIndex;
 }
 
 void ModuleShaderDescriptors::createDefaultSamplers() {

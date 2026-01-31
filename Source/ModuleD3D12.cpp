@@ -303,7 +303,7 @@ void ModuleD3D12::recreateRTVs() {
 	clearValue.Color[3] = 1.0f;
 
 	CD3DX12_HEAP_PROPERTIES heapProps(D3D12_HEAP_TYPE_DEFAULT);
-	app->getModuleD3D12()->getDevice()->CreateCommittedResource(&heapProps, D3D12_HEAP_FLAG_NONE, &sceneRTVTextureDesc, D3D12_RESOURCE_STATE_RENDER_TARGET, &clearValue, IID_PPV_ARGS(&sceneRenderTexture));
+	app->getModuleD3D12()->getDevice()->CreateCommittedResource(&heapProps, D3D12_HEAP_FLAG_NONE, &sceneRTVTextureDesc, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, &clearValue, IID_PPV_ARGS(&sceneRenderTexture));
 	sceneSRVIndexInHeap = app->getModuleShaderDescriptors()->createGenericSRV(sceneRenderTexture.Get(), DXGI_FORMAT_R8G8B8A8_UNORM, 1);
 	D3D12_RENDER_TARGET_VIEW_DESC sceneRTVDesc = {};
 	sceneRTVDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
