@@ -28,8 +28,6 @@ ModuleAssignment2::ModuleAssignment2(HWND _hWnd) : hWnd(_hWnd) {}
 
 bool ModuleAssignment2::init() {
 
-	app->setModuleAssignment2(this);
-
 	// Read the vertex and index buffers and the texture from GLTF and pack them into a GameObject
 	gameObject = createGameObjectFromGLTF("Duck.gltf", 0, 0);
 	// The duck is HUGE for some reason (hundreds of units big)
@@ -42,11 +40,11 @@ bool ModuleAssignment2::init() {
 
 	buildPSO();
 
-	ComPtr<ID3D12Device> device = app->getModuleD3D12()->getDevice();
+	ComPtr<ID3D12Device> device = app->getModuleD3D12().getDevice();
 	// Init DebugDrawPass (for drawing axis and stuff)
 	ComPtr<ID3D12Device4> d4;
 	device->QueryInterface(IID_PPV_ARGS(&d4));
-	debugDrawPass = new DebugDrawPass(d4.Get(), app->getModuleD3D12()->getRenderCommandQueue().Get(), false);
+	debugDrawPass = new DebugDrawPass(d4.Get(), app->getModuleD3D12().getRenderCommandQueue().Get(), false);
 
 
 	model = Matrix::CreateScale(gameObject->getTransform()->scale) * 
@@ -57,7 +55,7 @@ bool ModuleAssignment2::init() {
 }
 
 bool ModuleAssignment2::postInit() {
-	ComPtr<ID3D12GraphicsCommandList> commandList = app->getModuleD3D12()->getCurrentBufferCommandList();
+	ComPtr<ID3D12GraphicsCommandList> commandList = app->getModuleD3D12().getCurrentBufferCommandList();
 	// We must transition the GPU index buffer to D3D12_RESOURCE_STATE_INDEX_BUFFER
 	D3D12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition(gpuIndexBuffer.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_INDEX_BUFFER, D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, D3D12_RESOURCE_BARRIER_FLAG_NONE);
 	commandList->ResourceBarrier(1, &barrier);
@@ -68,7 +66,7 @@ void ModuleAssignment2::update() {}
 
 void ModuleAssignment2::preRender() {
 	if (textureFilteringChanged || textureAddressingChanged) {
-		app->getModuleD3D12()->WaitForAllFences();
+		app->getModuleD3D12().WaitForAllFences();
 		buildRootSignature();
 		buildPSO();
 		textureFilteringChanged = false;
@@ -80,26 +78,26 @@ void ModuleAssignment2::render() {
 	model = Matrix::CreateScale(gameObject->getTransform()->scale) *
 		Matrix::CreateFromQuaternion(gameObject->getTransform()->rotation) *
 		Matrix::CreateTranslation(gameObject->getTransform()->position);
-	mvp = (model * app->getModuleCamera()->getViewMatrix() * app->getModuleCamera()->getProjectionMatrix()).Transpose();
+	mvp = (model * app->getModuleCameraEditor().getViewMatrix() * app->getModuleCameraEditor().getProjectionMatrix()).Transpose();
 
-	ComPtr<ID3D12GraphicsCommandList> commandList = app->getModuleD3D12()->getCurrentBufferCommandList();
+	ComPtr<ID3D12GraphicsCommandList> commandList = app->getModuleD3D12().getCurrentBufferCommandList();
 
 	commandList->SetPipelineState(pso.Get());
 
 	D3D12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition(
-		app->getModuleD3D12()->getSceneRenderTexture(),                  // the texture resource
+		app->getModuleD3D12().getSceneRenderTexture(),                  // the texture resource
 		D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
 		D3D12_RESOURCE_STATE_RENDER_TARGET
 	);
 	commandList->ResourceBarrier(1, &barrier);
 
-	//unsigned int rtvIndexInRTVHeap = app->getModuleD3D12()->getCurrentRTVIndexInRTVHeap();
-	//D3D12_CPU_DESCRIPTOR_HANDLE rtvCpuDescriptorHandle = app->getModuleNonShaderDescriptors()->getCPUHandleFromRTVHeap(rtvIndexInRTVHeap);
-	unsigned int dsvIndexInDSVHeap = app->getModuleD3D12()->getDSVIndexInDSVHeap();
-	D3D12_CPU_DESCRIPTOR_HANDLE dsvCpuDescriptorHandle = app->getModuleNonShaderDescriptors()->getCPUHandleFromDSVHeap(dsvIndexInDSVHeap);
+	//unsigned int rtvIndexInRTVHeap = app->getModuleD3D12().getCurrentRTVIndexInRTVHeap();
+	//D3D12_CPU_DESCRIPTOR_HANDLE rtvCpuDescriptorHandle = app->getModuleNonShaderDescriptors().getCPUHandleFromRTVHeap(rtvIndexInRTVHeap);
+	unsigned int dsvIndexInDSVHeap = app->getModuleD3D12().getDSVIndexInDSVHeap();
+	D3D12_CPU_DESCRIPTOR_HANDLE dsvCpuDescriptorHandle = app->getModuleNonShaderDescriptors().getCPUHandleFromDSVHeap(dsvIndexInDSVHeap);
 	// TODO: change the render target to the texture
-	unsigned int sceneRTVIndexInHeap = app->getModuleD3D12()->getSceneRTVIndexInHeap();
-	D3D12_CPU_DESCRIPTOR_HANDLE rtvCpuDescriptorHandle = app->getModuleNonShaderDescriptors()->getCPUHandleFromRTVHeap(sceneRTVIndexInHeap);
+	unsigned int sceneRTVIndexInHeap = app->getModuleD3D12().getSceneRTVIndexInHeap();
+	D3D12_CPU_DESCRIPTOR_HANDLE rtvCpuDescriptorHandle = app->getModuleNonShaderDescriptors().getCPUHandleFromRTVHeap(sceneRTVIndexInHeap);
 	commandList->OMSetRenderTargets(1, &rtvCpuDescriptorHandle, FALSE, &dsvCpuDescriptorHandle);
 	float backgroundColor[4] = { 0.2f, 0.2f, 0.2f, 1.0f };
 	commandList->ClearRenderTargetView(rtvCpuDescriptorHandle, backgroundColor, 0, nullptr);
@@ -123,7 +121,7 @@ void ModuleAssignment2::render() {
 	};
 	commandList->SetGraphicsRootConstantBufferView(2, normalCB->GetGPUVirtualAddress());
 
-	cameraData->cameraPos = app->getModuleCamera()->getTransform().position;
+	cameraData->cameraPos = app->getModuleCameraEditor().getTransform().position;
 	commandList->SetGraphicsRootConstantBufferView(4, cameraCB->GetGPUVirtualAddress());
 
 	materialData->materialN = pbrMaterialN;
@@ -148,7 +146,7 @@ void ModuleAssignment2::render() {
 
 	commandList->IASetPrimitiveTopology(D3D10_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
-	ID3D12DescriptorHeap* srvHeap = app->getModuleShaderDescriptors()->getDescriptorHeap();
+	ID3D12DescriptorHeap* srvHeap = app->getModuleShaderDescriptors().getDescriptorHeap();
 	ID3D12DescriptorHeap* srvHeaps[1] = {srvHeap};
 	commandList->SetDescriptorHeaps(1, srvHeaps);
 	
@@ -157,10 +155,10 @@ void ModuleAssignment2::render() {
 	commandList->DrawIndexedInstanced(gameObject->getMesh()->getNumIndices(), 1, 0, 0, 0);
 
 	// Draw debug info last so it's on top
-	debugDrawPass->record(commandList.Get(), app->getSceneRenderWindowWidth(), app->getSceneRenderWindowHeight(), app->getModuleCamera()->getViewMatrix(), app->getModuleCamera()->getProjectionMatrix());
+	debugDrawPass->record(commandList.Get(), app->getSceneRenderWindowWidth(), app->getSceneRenderWindowHeight(), app->getModuleCameraEditor().getViewMatrix(), app->getModuleCameraEditor().getProjectionMatrix());
 
 	barrier = CD3DX12_RESOURCE_BARRIER::Transition(
-		app->getModuleD3D12()->getSceneRenderTexture(),                  // the texture resource
+		app->getModuleD3D12().getSceneRenderTexture(),                  // the texture resource
 		D3D12_RESOURCE_STATE_RENDER_TARGET,
 		D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE
 	);
@@ -200,7 +198,7 @@ D3D12_TEXTURE_ADDRESS_MODE ModuleAssignment2::imGuiAddressingToDX12(unsigned int
 }
 
 void ModuleAssignment2::buildRootSignature() {
-	ComPtr<ID3D12Device> device = app->getModuleD3D12()->getDevice();
+	ComPtr<ID3D12Device> device = app->getModuleD3D12().getDevice();
 	CD3DX12_ROOT_SIGNATURE_DESC rootSigDesc = {};
 
 	CD3DX12_ROOT_PARAMETER rootParameters[7] = {};
@@ -232,7 +230,7 @@ void ModuleAssignment2::buildRootSignature() {
 }
 
 void ModuleAssignment2::buildPSO() {
-	ComPtr<ID3D12Device> device = app->getModuleD3D12()->getDevice();
+	ComPtr<ID3D12Device> device = app->getModuleD3D12().getDevice();
 	D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = {};
 	psoDesc.pRootSignature = rootSignature.Get();
 	auto dataVS = DX::ReadData(L"VertexShader.cso");
@@ -296,21 +294,21 @@ GameObject* ModuleAssignment2::createGameObjectFromGLTF(const std::string fileNa
 	GLTFLoader::loadMeshIntoGameObjectGLTF(tinyGLTFModel, meshIndex, primitiveIndex, gO);
 
 	// Vertex buffer
-	app->getModuleResources()->createDefaultBufferWithData(gpuVertexBuffer, gO->getMesh()->getVertices(), gO->getMesh()->getNumVertices() * sizeof(Vertex));
-	//app->getModuleResources()->createUploadBuffer(stagingVertexBuffer, gO->getMesh()->getNumVertices() * sizeof(Vertex));
+	app->getModuleResources().createDefaultBufferWithData(gpuVertexBuffer, gO->getMesh()->getVertices(), gO->getMesh()->getNumVertices() * sizeof(Vertex));
+	//app->getModuleResources().createUploadBuffer(stagingVertexBuffer, gO->getMesh()->getNumVertices() * sizeof(Vertex));
 	createVertexBufferView(&vBV, *gO);
 
 	// Copy vertex buffer
-	//app->getModuleResources()->copyDataToBuffer(stagingVertexBuffer, gO->getMesh()->getVertices(), gO->getMesh()->getNumVertices() * sizeof(Vertex));
+	//app->getModuleResources().copyDataToBuffer(stagingVertexBuffer, gO->getMesh()->getVertices(), gO->getMesh()->getNumVertices() * sizeof(Vertex));
 
 
 	// Index buffer
-	app->getModuleResources()->createDefaultBufferWithData(gpuIndexBuffer, gO->getMesh()->getIndices(), gO->getMesh()->getNumIndices() * sizeof(unsigned short));
-	//app->getModuleResources()->createUploadBuffer(stagingIndexBuffer, gO->getMesh()->getNumIndices() * sizeof(unsigned short));
+	app->getModuleResources().createDefaultBufferWithData(gpuIndexBuffer, gO->getMesh()->getIndices(), gO->getMesh()->getNumIndices() * sizeof(unsigned short));
+	//app->getModuleResources().createUploadBuffer(stagingIndexBuffer, gO->getMesh()->getNumIndices() * sizeof(unsigned short));
 	createIndexBufferView(&iBV, *gO);
 
 	// Copy index buffer
-	//app->getModuleResources()->copyDataToBuffer(stagingIndexBuffer, gO->getMesh()->getIndices(), gO->getMesh()->getNumIndices() * sizeof(unsigned short));
+	//app->getModuleResources().copyDataToBuffer(stagingIndexBuffer, gO->getMesh()->getIndices(), gO->getMesh()->getNumIndices() * sizeof(unsigned short));
 
 
 	// Load texture from GLTF
@@ -319,35 +317,35 @@ GameObject* ModuleAssignment2::createGameObjectFromGLTF(const std::string fileNa
 	// Init the camera matrices
 	Matrix model = Matrix::CreateScale(gO->getTransform()->scale) * Matrix::CreateTranslation(gO->getTransform()->position);
 
-	mvp = (model * app->getModuleCamera()->getViewMatrix() * app->getModuleCamera()->getProjectionMatrix()).Transpose();
+	mvp = (model * app->getModuleCameraEditor().getViewMatrix() * app->getModuleCameraEditor().getProjectionMatrix()).Transpose();
 
 	return gO;
 }
 
 void ModuleAssignment2::initConstantBufferViews() {
-	ComPtr<ID3D12Device> device = app->getModuleD3D12()->getDevice();
+	ComPtr<ID3D12Device> device = app->getModuleD3D12().getDevice();
 	// Create and map once MvpCB
-	app->getModuleResources()->createDefaultBuffer(sizeof(MvpCB));
-	app->getModuleResources()->createUploadBuffer(mvpCB, sizeof(MvpCB));
+	app->getModuleResources().createDefaultBuffer(sizeof(MvpCB));
+	app->getModuleResources().createUploadBuffer(mvpCB, sizeof(MvpCB));
 	mvpCB->Map(0, nullptr, reinterpret_cast<void**>(&mvpData));
 
 	// Create and map once ModelCB
-	app->getModuleResources()->createUploadBuffer(modelCB, sizeof(ModelMatrixCB));
+	app->getModuleResources().createUploadBuffer(modelCB, sizeof(ModelMatrixCB));
 	modelCB->Map(0, nullptr, reinterpret_cast<void**>(&modelData));
 
 	// Create and map once normalCB
-	app->getModuleResources()->createUploadBuffer(normalCB, sizeof(NormalMatrixCB));
+	app->getModuleResources().createUploadBuffer(normalCB, sizeof(NormalMatrixCB));
 	normalCB->Map(0, nullptr, reinterpret_cast<void**>(&normalData));
 
 	// Create and map once cameraCB (this would normally be on the Camera --> move to Camera)
-	app->getModuleResources()->createUploadBuffer(cameraCB, sizeof(CameraCB));
+	app->getModuleResources().createUploadBuffer(cameraCB, sizeof(CameraCB));
 	cameraCB->Map(0, nullptr, reinterpret_cast<void**>(&cameraData));
 
 	// Create and map once lightCB (this would normally be on the Light --> move to Light)
-	app->getModuleResources()->createUploadBuffer(lightCB, sizeof(LightCB));
+	app->getModuleResources().createUploadBuffer(lightCB, sizeof(LightCB));
 	lightCB->Map(0, nullptr, reinterpret_cast<void**>(&lightData));
 
 	// Create and map once materialCB
-	app->getModuleResources()->createUploadBuffer(materialCB, sizeof(MaterialCB));
+	app->getModuleResources().createUploadBuffer(materialCB, sizeof(MaterialCB));
 	materialCB->Map(0, nullptr, reinterpret_cast<void**>(&materialData));
 }

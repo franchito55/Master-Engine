@@ -20,17 +20,16 @@
 extern Application* app;
 
 bool ModuleImGui::init() {
-	app->setModuleImGui(this);
 	app->setSceneRenderWindowWidth(400);
 	app->setSceneRenderWindowHeight(400);
-	moduleD3D12 = app->getModuleD3D12();
-	moduleCamera = app->getModuleCamera();
+	moduleD3D12 = &app->getModuleD3D12();
+	moduleCameraEditor = &app->getModuleCameraEditor();
 	sceneRenderWindowSize = { 400, 400 };
-	uiRotationDeg = app->getModuleAssignment2()->getObjectRotation()->ToEuler() * RAD2DEG;
+	uiRotationDeg = app->getModuleAssignment2().getObjectRotation()->ToEuler() * RAD2DEG;
 
 	// ============ Init ImGui wrapper ============
-	unsigned int descriptorsIndex = app->getModuleShaderDescriptors()->allocateDescriptor();
-	imGuiPass = new ImGuiPass(moduleD3D12->getDevice().Get(), hWnd, app->getModuleShaderDescriptors()->getCPUHandleFromGenericHeap(descriptorsIndex), app->getModuleShaderDescriptors()->getGPUHandleFromGenericHeap(descriptorsIndex));
+	unsigned int descriptorsIndex = app->getModuleShaderDescriptors().allocateDescriptor();
+	imGuiPass = new ImGuiPass(moduleD3D12->getDevice().Get(), hWnd, app->getModuleShaderDescriptors().getCPUHandleFromGenericHeap(descriptorsIndex), app->getModuleShaderDescriptors().getGPUHandleFromGenericHeap(descriptorsIndex));
 
 	return true;
 }
@@ -57,8 +56,8 @@ void ModuleImGui::render() {
 	fpsCount++;
 
 	// This HAS to go last so that the UI gets rendered on top
-	unsigned int rtvIndexInRTVHeap = app->getModuleD3D12()->getCurrentRTVIndexInRTVHeap();
-	D3D12_CPU_DESCRIPTOR_HANDLE rtvCpuDescriptorHandle = app->getModuleNonShaderDescriptors()->getCPUHandleFromRTVHeap(rtvIndexInRTVHeap);
+	unsigned int rtvIndexInRTVHeap = app->getModuleD3D12().getCurrentRTVIndexInRTVHeap();
+	D3D12_CPU_DESCRIPTOR_HANDLE rtvCpuDescriptorHandle = app->getModuleNonShaderDescriptors().getCPUHandleFromRTVHeap(rtvIndexInRTVHeap);
 	imGuiPass->record(moduleD3D12->getCurrentBufferCommandList().Get(), rtvCpuDescriptorHandle); // TODO : change when we implement rendering to a texture
 }
 
@@ -98,19 +97,19 @@ void ModuleImGui::showTextureInfoWindow() {
 	// ============ Texture info window ============
 	ImGui::Begin("Texture info");
 
-	int prevFilteringMode = *app->getModuleAssignment2()->getCurrentTextureFilteringMode();
+	int prevFilteringMode = *app->getModuleAssignment2().getCurrentTextureFilteringMode();
 	const char* filteringModes[] = { "LINEAR", "POINT" };
-	int* currentTextureFiltering = app->getModuleAssignment2()->getCurrentTextureFilteringMode();
+	int* currentTextureFiltering = app->getModuleAssignment2().getCurrentTextureFilteringMode();
 	ImGui::Combo("Filtering mode", currentTextureFiltering, filteringModes, IM_ARRAYSIZE(filteringModes));
 	if (*currentTextureFiltering != prevFilteringMode) // Set this flag to change texture filtering mode next frame
-		app->getModuleAssignment2()->setTextureFilteringChanged(true);
+		app->getModuleAssignment2().setTextureFilteringChanged(true);
 
-	int prevAddressingMode = *app->getModuleAssignment2()->getCurrentTextureAddressingMode();
+	int prevAddressingMode = *app->getModuleAssignment2().getCurrentTextureAddressingMode();
 	const char* addressingModes[] = { "WRAP", "CLAMP" };
-	int* currentTextureAddressingMode = app->getModuleAssignment2()->getCurrentTextureAddressingMode();
+	int* currentTextureAddressingMode = app->getModuleAssignment2().getCurrentTextureAddressingMode();
 	ImGui::Combo("Addressing mode", currentTextureAddressingMode, addressingModes, IM_ARRAYSIZE(addressingModes));
 	if (*currentTextureAddressingMode != prevAddressingMode) // Set this flag to change texture addressing mode next frame
-		app->getModuleAssignment2()->setTextureAddressingChanged(true);
+		app->getModuleAssignment2().setTextureAddressingChanged(true);
 
 	ImGui::End();
 }
@@ -118,9 +117,9 @@ void ModuleImGui::showTextureInfoWindow() {
 void ModuleImGui::showGeometryInfoWindow() {
 	// ============ Geometry info window ============
 	ImGui::Begin("Geometry");
-	Matrix cameraViewMatrix = moduleCamera->getViewMatrix();
-	Matrix cameraProjectionMatrix = moduleCamera->getProjectionMatrix();
-	Matrix* model = app->getModuleAssignment2()->getModelMatrix();
+	Matrix cameraViewMatrix = moduleCameraEditor->getViewMatrix();
+	Matrix cameraProjectionMatrix = moduleCameraEditor->getProjectionMatrix();
+	Matrix* model = app->getModuleAssignment2().getModelMatrix();
 
 	if (ImGui::IsKeyPressed(ImGuiKey_T))
 		mCurrentGizmoOperation = ImGuizmo::TRANSLATE;
@@ -137,8 +136,8 @@ void ModuleImGui::showGeometryInfoWindow() {
 	if (ImGui::RadioButton("Scale [E]", mCurrentGizmoOperation == ImGuizmo::SCALE))
 		mCurrentGizmoOperation = ImGuizmo::SCALE;
 
-	Vector3* position = app->getModuleAssignment2()->getObjectPosition();
-	Vector3* scale = app->getModuleAssignment2()->getObjectScale();
+	Vector3* position = app->getModuleAssignment2().getObjectPosition();
+	Vector3* scale = app->getModuleAssignment2().getObjectScale();
 	Vector3 rotationBefore = uiRotationDeg;
 	ImGui::DragFloat3("Position", &position->x, 0.1f, -40.0f, 40.0f);
 	ImGui::DragFloat3("Rotation", &uiRotationDeg.x, 1.0f, -360.0f, 360.0f);
@@ -155,24 +154,24 @@ void ModuleImGui::showGeometryInfoWindow() {
 	if (ImGuizmo::IsUsing()) {
 		float matrixTranslation[3], matrixRotation[3], matrixScale[3];
 		ImGuizmo::DecomposeMatrixToComponents(&model->_11, matrixTranslation, matrixRotation, matrixScale);
-		app->getModuleAssignment2()->setObjectPosition(Vector3(matrixTranslation[0], matrixTranslation[1], matrixTranslation[2]));
-		app->getModuleAssignment2()->setObjectScale(Vector3(matrixScale[0], matrixScale[1], matrixScale[2]));
+		app->getModuleAssignment2().setObjectPosition(Vector3(matrixTranslation[0], matrixTranslation[1], matrixTranslation[2]));
+		app->getModuleAssignment2().setObjectScale(Vector3(matrixScale[0], matrixScale[1], matrixScale[2]));
 		Matrix deltaModelMatrix = modelMatrixBeforeGizmo.Invert() * *model;
 		Quaternion deltaRotation = Quaternion::CreateFromRotationMatrix(deltaModelMatrix);
-		Quaternion currRotation = *app->getModuleAssignment2()->getObjectRotation();
+		Quaternion currRotation = *app->getModuleAssignment2().getObjectRotation();
 		Quaternion finalRotation;
 		if (mCurrentGizmoMode == ImGuizmo::LOCAL)
 			finalRotation = deltaRotation * currRotation;
 		else
 			finalRotation = currRotation * deltaRotation;
 		finalRotation.Normalize();
-		app->getModuleAssignment2()->setObjectRotation(finalRotation);
+		app->getModuleAssignment2().setObjectRotation(finalRotation);
 		uiRotationDeg = finalRotation.ToEuler() * RAD2DEG;
 	}
 	else if (uiRotationDeg != rotationBefore) {
 		Vector3 newRotationDeg = uiRotationDeg * DEG2RAD;
 		Quaternion newRotation = Quaternion::CreateFromYawPitchRoll(newRotationDeg.y, newRotationDeg.x, newRotationDeg.z);
-		app->getModuleAssignment2()->setObjectRotation(newRotation);
+		app->getModuleAssignment2().setObjectRotation(newRotation);
 	}
 
 	ImGui::End();
@@ -190,14 +189,14 @@ void ModuleImGui::showDebugGizmosWindow() {
 		dd::xzSquareGrid(-20.0f, 20.0f, 0.0f, 1.0f, dd::colors::LightGray);
 	if (showAxisTriad) {
 		// To avoid z-fighting between axis and grid. Axis lines always drawn on top
-		Vector3 nudge = moduleCamera->getTransform().position;
+		Vector3 nudge = moduleCameraEditor->getTransform().position;
 		nudge.Normalize();
 		Matrix axisPos = Matrix::CreateTranslation(nudge * 0.001f);
 		dd::axisTriad(ddConvert(axisPos), 0.05f, 0.5f);
 	}
 	if (showCameraTarget) {
 		float cameraTargetColor[3] = { 1.0f, 0.0f, 0.0f };
-		Vector3 cameraTarget = moduleCamera->getTarget();
+		Vector3 cameraTarget = moduleCameraEditor->getTarget();
 		dd::sphere(&cameraTarget.x, cameraTargetColor, 0.025f);
 	}
 }
@@ -233,11 +232,11 @@ void ModuleImGui::showConsoleWindow() {
 }
 
 void ModuleImGui::showCameraInfoWindow() {
-	Vector3 cameraPos = moduleCamera->getTransform().position;
-	Vector3 cameraForward = moduleCamera->getTransform().forward;
-	Vector3 cameraUp = moduleCamera->getTransform().up;
-	Vector3 cameraTarget = moduleCamera->getTarget();
-	float cameraOrbitingDist = moduleCamera->getCurrentOrbitingDistance();
+	Vector3 cameraPos = moduleCameraEditor->getTransform().position;
+	Vector3 cameraForward = moduleCameraEditor->getTransform().forward;
+	Vector3 cameraUp = moduleCameraEditor->getTransform().up;
+	Vector3 cameraTarget = moduleCameraEditor->getTarget();
+	float cameraOrbitingDist = moduleCameraEditor->getCurrentOrbitingDistance();
 
 	Vector3 newPos = cameraPos;
 	Vector3 newForward = cameraForward;
@@ -254,40 +253,40 @@ void ModuleImGui::showCameraInfoWindow() {
 		ImGui::DragFloat("Distance", &newOrbitingDist, 0.1f, MIN_ORBITING_DISTANCE, MAX_ORBITING_DISTANCE);
 	}
 	if (ImGui::CollapsingHeader("Parameters")) {
-		ImGui::DragFloat("FOV", moduleCamera->getFov(), 1.0f, 5.0f, 120.0f);
-		ImGui::DragFloat("Move speed", moduleCamera->getMoveSpeed(), 1.0f, 5.0f, 100.0f);
-		ImGui::DragFloat("Rotation speed", moduleCamera->getRotationSpeed(), 0.1f, 1.0f, 20.0f);
-		ImGui::DragFloat("Zoom speed", moduleCamera->getZoomSpeed(), 0.1f, 1.0f, 20.0f);
+		ImGui::DragFloat("FOV", moduleCameraEditor->getFov(), 1.0f, 5.0f, 120.0f);
+		ImGui::DragFloat("Move speed", moduleCameraEditor->getMoveSpeed(), 1.0f, 5.0f, 100.0f);
+		ImGui::DragFloat("Rotation speed", moduleCameraEditor->getRotationSpeed(), 0.1f, 1.0f, 20.0f);
+		ImGui::DragFloat("Zoom speed", moduleCameraEditor->getZoomSpeed(), 0.1f, 1.0f, 20.0f);
 	}
 	ImGui::End();
 
 	// Check if edited via ImGui and set a flag in ModuleCameraEditor
 	if (newPos != cameraPos) {
-		moduleCamera->setPosUpdatedViaImGui(true);
-		moduleCamera->setImGuiPos(newPos);
+		moduleCameraEditor->setPosUpdatedViaImGui(true);
+		moduleCameraEditor->setImGuiPos(newPos);
 	}
 	if (newForward != cameraForward) {
-		moduleCamera->setForwardUpdatedViaImGui(true);
-		moduleCamera->setImGuiForward(newForward);
+		moduleCameraEditor->setForwardUpdatedViaImGui(true);
+		moduleCameraEditor->setImGuiForward(newForward);
 	}
 	if (newUp != cameraUp) {
-		moduleCamera->setUpUpdatedViaImGui(true);
-		moduleCamera->setImGuiUp(newUp);
+		moduleCameraEditor->setUpUpdatedViaImGui(true);
+		moduleCameraEditor->setImGuiUp(newUp);
 	}
 	if (newTarget != cameraTarget) {
-		moduleCamera->setTargetUpdatedViaImGui(true);
-		moduleCamera->setImGuiTarget(newTarget);
+		moduleCameraEditor->setTargetUpdatedViaImGui(true);
+		moduleCameraEditor->setImGuiTarget(newTarget);
 	}
 	if (newOrbitingDist != cameraOrbitingDist) {
-		moduleCamera->setOrbitingDistanceUpdatedViaImGui(true);
-		moduleCamera->setImGuiOrbitingDistance(newOrbitingDist);
+		moduleCameraEditor->setOrbitingDistanceUpdatedViaImGui(true);
+		moduleCameraEditor->setImGuiOrbitingDistance(newOrbitingDist);
 	}
 }
 
 void ModuleImGui::showLightingInfoWindow() {
-	Vector3* pbrLightPosition = app->getModuleAssignment2()->getLightPosition();
-	Vector3* pbrLightColor = app->getModuleAssignment2()->getLightColor();
-	float* pbrLightIntensity = app->getModuleAssignment2()->getLightIntensity();
+	Vector3* pbrLightPosition = app->getModuleAssignment2().getLightPosition();
+	Vector3* pbrLightColor = app->getModuleAssignment2().getLightColor();
+	float* pbrLightIntensity = app->getModuleAssignment2().getLightIntensity();
 
 	ImGui::Begin("Light");
 	ImGui::DragFloat3("Light position", &pbrLightPosition->x, 0.1f, -40.0f, 40.0f);
@@ -297,9 +296,9 @@ void ModuleImGui::showLightingInfoWindow() {
 }
 
 void ModuleImGui::showMaterialInfoWindow() {
-	Vector3* pbrMaterialDiffuse = app->getModuleAssignment2()->getMaterialDiffuse();
-	Vector3* pbrMaterialRf0 = app->getModuleAssignment2()->getMaterialFresnel0();
-	float* pbrMaterialN = app->getModuleAssignment2()->getMaterialN();
+	Vector3* pbrMaterialDiffuse = app->getModuleAssignment2().getMaterialDiffuse();
+	Vector3* pbrMaterialRf0 = app->getModuleAssignment2().getMaterialFresnel0();
+	float* pbrMaterialN = app->getModuleAssignment2().getMaterialN();
 
 	ImGui::Begin("Material");
 	ImGui::ColorEdit3("Material diffuse", &pbrMaterialDiffuse->x);
@@ -322,7 +321,7 @@ void ModuleImGui::showSceneRenderWindow() {
 		resizePending.right = sceneRenderWindowSize.x;
 		resizePending.top = 0;
 		resizePending.bottom = sceneRenderWindowSize.y;
-		app->getModuleD3D12()->setSceneResizePending(resizePending);
+		app->getModuleD3D12().setSceneResizePending(resizePending);
 	}
 
 	sceneRenderWindowPos = ImGui::GetWindowPos();
@@ -331,12 +330,12 @@ void ModuleImGui::showSceneRenderWindow() {
 	sceneRenderWindowImageRectMax = ImGui::GetWindowContentRegionMax();
 
 	sceneRenderWindowHovered = ImGui::IsWindowHovered();
-	ImGui::Image((ImTextureID)app->getModuleShaderDescriptors()->getGPUHandleFromGenericHeap(app->getModuleD3D12()->getSceneSRVIndexInHeap()).ptr, sceneRenderWindowSize);
+	ImGui::Image((ImTextureID)app->getModuleShaderDescriptors().getGPUHandleFromGenericHeap(app->getModuleD3D12().getSceneSRVIndexInHeap()).ptr, sceneRenderWindowSize);
 
 	// Gizmo
-	Matrix cameraViewMatrix = moduleCamera->getViewMatrix();
-	Matrix cameraProjectionMatrix = moduleCamera->getProjectionMatrix();
-	Matrix* model = app->getModuleAssignment2()->getModelMatrix();
+	Matrix cameraViewMatrix = moduleCameraEditor->getViewMatrix();
+	Matrix cameraProjectionMatrix = moduleCameraEditor->getProjectionMatrix();
+	Matrix* model = app->getModuleAssignment2().getModelMatrix();
 	ImGuizmo::SetRect(
 		sceneRenderWindowPos.x + sceneRenderWindowImageRectMin.x,
 		sceneRenderWindowPos.y + sceneRenderWindowImageRectMin.y,

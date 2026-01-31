@@ -15,14 +15,22 @@ Application::Application(int argc, wchar_t** argv, void* hWnd)
     GetClientRect((HWND)hWnd, &windowRect);
     setWindowWidth(windowRect.right - windowRect.left);
     setWindowHeight(windowRect.bottom - windowRect.top);
-    modules.push_back(new ModuleCameraEditor((HWND)hWnd));
-    modules.push_back(new ModuleInput((HWND)hWnd));
-    modules.push_back(new ModuleD3D12((HWND)hWnd));
-    modules.push_back(new ModuleResources((HWND)hWnd));
-    modules.push_back(new ModuleShaderDescriptors((HWND)hWnd));
-    modules.push_back(new ModuleNonShaderDescriptors((HWND)hWnd));
-    modules.push_back(new ModuleAssignment2((HWND)hWnd));
-    modules.push_back(new ModuleImGui((HWND)hWnd)); // ModuleImGui MUST go last
+    moduleCameraEditor = new ModuleCameraEditor((HWND)hWnd);
+    moduleInput = new ModuleInput((HWND)hWnd);
+    moduleD3D12 = new ModuleD3D12((HWND)hWnd);
+    moduleShaderDescriptors = new ModuleShaderDescriptors((HWND)hWnd);
+    moduleResources = new ModuleResources((HWND)hWnd);
+    moduleNonShaderDescriptors = new ModuleNonShaderDescriptors((HWND)hWnd);
+    moduleAssignment2 = new ModuleAssignment2((HWND)hWnd);
+    moduleImGui = new ModuleImGui((HWND)hWnd);
+    modules.push_back(moduleCameraEditor);
+    modules.push_back(moduleInput);
+    modules.push_back(moduleD3D12);
+    modules.push_back(moduleShaderDescriptors);
+    modules.push_back(moduleResources);
+    modules.push_back(moduleNonShaderDescriptors);
+    modules.push_back(moduleAssignment2);
+    modules.push_back(moduleImGui); // ModuleImGui MUST go last
 }
 
 Application::~Application()

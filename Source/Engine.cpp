@@ -223,7 +223,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             GetClientRect(hWnd, &resizeRect);
             app->setWindowWidth(resizeRect.right - resizeRect.left);
             app->setWindowHeight(resizeRect.bottom - resizeRect.top);
-            app->getModuleD3D12()->setWindowResizePending(resizeRect);
+            app->getModuleD3D12().setWindowResizePending(resizeRect);
         }
         break;
     case WM_EXITSIZEMOVE:

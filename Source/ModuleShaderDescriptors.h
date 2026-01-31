@@ -9,7 +9,7 @@ public:
 
 	bool init() override;
 
-	ID3D12DescriptorHeap* getDescriptorHeap() { return genericSrvHeap.Get(); }
+	ID3D12DescriptorHeap* getDescriptorHeap() const { return genericSrvHeap.Get(); }
 
 	unsigned int createGenericSRV(ID3D12Resource* resource, DXGI_FORMAT format, unsigned int mipLevels);
 	unsigned int createSampler(D3D12_SAMPLER_DESC* samplerDesc);

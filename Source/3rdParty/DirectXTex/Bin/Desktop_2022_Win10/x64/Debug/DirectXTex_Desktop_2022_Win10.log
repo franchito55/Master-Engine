@@ -1,11 +1,11 @@
 ﻿  DirectXTexUtil.cpp
   BC.cpp
-  BC4BC5.cpp
 C:\Users\Fran\Documents\Master\C++ for Video Games\Engine\Source\3rdParty\DirectXTex\BC.h(53,5): warning C5267: la definición de operador de asignaciones implícita para 'DirectX::HDRColorA' está en desuso porque tiene un constructor de copia proporcionado por el usuario
   (compilando archivo de origen "/BC.cpp")
       C:\Users\Fran\Documents\Master\C++ for Video Games\Engine\Source\3rdParty\DirectXTex\BC.cpp(500,20):
       el operador de asignaciones implícito para 'DirectX::HDRColorA' se requiere primero aquí
   
+  BC4BC5.cpp
   BC6HBC7.cpp
 C:\Users\Fran\Documents\Master\C++ for Video Games\Engine\Source\3rdParty\DirectXTex\BC.h(53,5): warning C5267: la definición de operador de asignaciones implícita para 'DirectX::HDRColorA' está en desuso porque tiene un constructor de copia proporcionado por el usuario
   (compilando archivo de origen "/BC6HBC7.cpp")

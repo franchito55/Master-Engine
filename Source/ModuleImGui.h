@@ -30,7 +30,7 @@ public:
 private:
 	HWND hWnd;
 	ModuleD3D12* moduleD3D12 = nullptr;
-	ModuleCameraEditor* moduleCamera = nullptr;
+	ModuleCameraEditor* moduleCameraEditor = nullptr;
 	ImGuiPass* imGuiPass = nullptr;
 
 	// FPS info window

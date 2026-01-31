@@ -108,7 +108,7 @@ bool GLTFLoader::loadTextureIntoGameObjectGLTF(const tinygltf::Model& model, uns
 	unsigned int textureImgIndex = model.textures.at(textureIndex).source;
 	std::string textureImgURI = ASSETS_RELATIVE_PATH + model.images.at(textureImgIndex).uri;
 
-	DirectX::ScratchImage image = app->getModuleResources()->createTextureFromFile(textureImgURI, gpuTextureBuffer, stagingTextureBuffer);
+	DirectX::ScratchImage image = app->getModuleResources().createTextureFromFile(textureImgURI, gpuTextureBuffer, stagingTextureBuffer);
 	
 	return true;
 }

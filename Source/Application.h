@@ -21,14 +21,14 @@ class Application
 {
 public:
 
-	Application(int argc, wchar_t** argv, void* hWnd);
-	~Application();
+    Application(int argc, wchar_t** argv, void* hWnd);
+    ~Application();
 
-	bool         init();
-	void         update();
-	bool         cleanUp();
+    bool         init();
+    void         update();
+    bool         cleanUp();
 
-    
+
     float                       getFPS() const { return 1000.0f * float(MAX_FPS_TICKS) / tickSum; }
     float                       getAvgElapsedMs() const { return tickSum / float(MAX_FPS_TICKS); }
     uint64_t                    getElapsedMilis() const { return elapsedMilis; }
@@ -38,32 +38,41 @@ public:
 
     std::vector<Module*> getModules() const { return modules; }
 
-    ModuleD3D12* getModuleD3D12() const { return moduleD3D12; }
-    void setModuleD3D12(ModuleD3D12* _moduleD3D12) { moduleD3D12 = _moduleD3D12; }
+    ModuleD3D12& getModuleD3D12() { return *moduleD3D12; }
+    const ModuleD3D12& getModuleD3D12() const { return *moduleD3D12; }
+    void setModuleD3D12(ModuleD3D12& _moduleD3D12) { moduleD3D12 = &_moduleD3D12; }
 
-    ModuleEditor* getModuleEditor() const { return moduleEditor; }
-    void setModuleEditor(ModuleEditor* _moduleEditor) { moduleEditor = _moduleEditor; }
+    ModuleEditor& getModuleEditor() { return *moduleEditor; }
+    const ModuleEditor& getModuleEditor() const { return *moduleEditor; }
+    void setModuleEditor(ModuleEditor& _moduleEditor) { moduleEditor = &_moduleEditor; }
 
-    ModuleResources* getModuleResources() const { return moduleResources; }
-    void setModuleResources(ModuleResources* _moduleResources) { moduleResources = _moduleResources; }
+    ModuleResources& getModuleResources() { return *moduleResources; }
+    const ModuleResources& getModuleResources() const { return *moduleResources; }
+    void setModuleResources(ModuleResources& _moduleResources) { moduleResources = &_moduleResources; }
 
-    ModuleInput* getModuleInput() const { return moduleInput; }
-    void setModuleInput(ModuleInput* _moduleInput) { moduleInput = _moduleInput; }
+    ModuleInput& getModuleInput() { return *moduleInput; }
+    const ModuleInput& getModuleInput() const { return *moduleInput; }
+    void setModuleInput(ModuleInput& _moduleInput) { moduleInput = &_moduleInput; }
 
-    ModuleCameraEditor* getModuleCamera() const { return moduleCamera; }
-    void setModuleCamera(ModuleCameraEditor* _moduleCamera) { moduleCamera = _moduleCamera; }
+    ModuleCameraEditor& getModuleCameraEditor() { return *moduleCameraEditor; }
+    const ModuleCameraEditor& getModuleCameraEditor() const { return *moduleCameraEditor; }
+    void setModuleCamera(ModuleCameraEditor& _moduleCamera) { moduleCameraEditor = &_moduleCamera; }
 
-    ModuleAssignment2* getModuleAssignment2() const { return moduleAssignment2; }
-    void setModuleAssignment2(ModuleAssignment2* _moduleAssignment2) { moduleAssignment2 = _moduleAssignment2; }
+    ModuleAssignment2& getModuleAssignment2() { return *moduleAssignment2; }
+    const ModuleAssignment2& getModuleAssignment2() const { return *moduleAssignment2; }
+    void setModuleAssignment2(ModuleAssignment2& _moduleAssignment2) { moduleAssignment2 = &_moduleAssignment2; }
 
-    ModuleShaderDescriptors* getModuleShaderDescriptors() const { return moduleShaderDescriptors; }
-    void setModuleShaderDescriptors(ModuleShaderDescriptors* _moduleShaderDescriptors) { moduleShaderDescriptors = _moduleShaderDescriptors; }
+    ModuleShaderDescriptors& getModuleShaderDescriptors() { return *moduleShaderDescriptors; }
+    const ModuleShaderDescriptors& getModuleShaderDescriptors() const { return *moduleShaderDescriptors; }
+    void setModuleShaderDescriptors(ModuleShaderDescriptors& _moduleShaderDescriptors) { moduleShaderDescriptors = &_moduleShaderDescriptors; }
 
-    ModuleNonShaderDescriptors* getModuleNonShaderDescriptors() const { return moduleNonShaderDescriptors; }
-    void setModuleNonShaderDescriptors(ModuleNonShaderDescriptors* _moduleNonShaderDescriptors) { moduleNonShaderDescriptors = _moduleNonShaderDescriptors; }
+    ModuleNonShaderDescriptors& getModuleNonShaderDescriptors() { return *moduleNonShaderDescriptors; }
+    const ModuleNonShaderDescriptors& getModuleNonShaderDescriptors() const { return *moduleNonShaderDescriptors; }
+    void setModuleNonShaderDescriptors(ModuleNonShaderDescriptors& _moduleNonShaderDescriptors) { moduleNonShaderDescriptors = &_moduleNonShaderDescriptors; }
 
-    ModuleImGui* getModuleImGui() const { return moduleImGui; }
-    void setModuleImGui(ModuleImGui* _moduleImGui) { moduleImGui = _moduleImGui; }
+    ModuleImGui& getModuleImGui() { return *moduleImGui; }
+    const ModuleImGui& getModuleImGui() const { return *moduleImGui; }
+    void setModuleImGui(ModuleImGui& _moduleImGui) { moduleImGui = &_moduleImGui; }
 
     unsigned int getWindowWidth() const { return windowWidth; }
     void setWindowWidth(const unsigned int _windowWidth) { windowWidth = _windowWidth; }
@@ -92,7 +101,7 @@ private:
     ModuleEditor* moduleEditor;
     ModuleResources* moduleResources;
     ModuleInput* moduleInput;
-    ModuleCameraEditor* moduleCamera;
+    ModuleCameraEditor* moduleCameraEditor;
     ModuleAssignment2* moduleAssignment2;
     ModuleShaderDescriptors* moduleShaderDescriptors;
     ModuleNonShaderDescriptors* moduleNonShaderDescriptors;
@@ -104,5 +113,3 @@ private:
     unsigned int sceneRenderWindowWidth;
     unsigned int sceneRenderWindowHeight;
 };
-
-extern Application* app;

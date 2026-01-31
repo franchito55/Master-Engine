@@ -8,8 +8,7 @@
 extern Application* app;
 
 bool ModuleNonShaderDescriptors::init() {
-	app->setModuleNonShaderDescriptors(this);
-	device = app->getModuleD3D12()->getDevice();
+	device = app->getModuleD3D12().getDevice();
 	rtvDescriptorSize = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
 	dsvDescriptorSize = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
 

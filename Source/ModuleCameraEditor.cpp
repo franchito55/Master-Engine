@@ -16,7 +16,7 @@
 ModuleCameraEditor::ModuleCameraEditor(HWND hWnd) {}
 
 bool ModuleCameraEditor::init() {
-	app->setModuleCamera(this); transform.position = Vector3(1.0f, 1.5f, 3.0f);
+	transform.position = Vector3(1.0f, 1.5f, 3.0f);
 	transform.rotation = Quaternion::Identity;
 	transform.forward = target - transform.position;
 	transform.forward.Normalize();
@@ -35,20 +35,20 @@ bool ModuleCameraEditor::init() {
 
 void ModuleCameraEditor::update() {
 
-	Keyboard::State kbState = app->getModuleInput()->GetKeyboard()->GetState();
+	Keyboard::State kbState = app->getModuleInput().GetKeyboard()->GetState();
 
 	float realMoveSpeed = moveSpeed;
 	if (kbState.LeftShift) {
 		realMoveSpeed *= 2.0f;
 	}
 
-	Mouse::State mouseState = app->getModuleInput()->GetMouse()->GetState();
+	Mouse::State mouseState = app->getModuleInput().GetMouse()->GetState();
 	int mouseDeltaX = mouseState.x - previousMouseX;
 	int mouseDeltaY = mouseState.y - previousMouseY;
 	int mouseScrollWheelDelta = mouseState.scrollWheelValue - previousScrollWheelValue;
 
 	// Don't scroll if hovering any ImGui window
-	if (app->getModuleImGui()->getIsSceneRenderWindowHovered() && mouseScrollWheelDelta != 0) {
+	if (app->getModuleImGui().getIsSceneRenderWindowHovered() && mouseScrollWheelDelta != 0) {
 		// We have to check if the next distance is <= the current one, since if the user scrolls really hard, it could jump to
 		// the other side of the triangle, bypassing the max zoom
 		Vector3 nextPos = transform.position + transform.forward * zoomSpeed / 1000.0f * mouseScrollWheelDelta;
@@ -62,7 +62,7 @@ void ModuleCameraEditor::update() {
 	Vector3 targetOffset = target - transform.position;
 
 	// Don't rotate if modifying the ImGui's drag sliders
-	if (app->getModuleImGui()->getIsSceneRenderWindowHovered() && kbState.LeftAlt && mouseState.leftButton && !mouseState.rightButton) {
+	if (app->getModuleImGui().getIsSceneRenderWindowHovered() && kbState.LeftAlt && mouseState.leftButton && !mouseState.rightButton) {
 
 		if (mouseDeltaY != 0) {
 			Vector3 offset = transform.position - target;
@@ -86,7 +86,7 @@ void ModuleCameraEditor::update() {
 	}
 
 	// Only EITHER rotate OR orbit, not both (too complicated and too tired to think of it)
-	if (app->getModuleImGui()->getIsSceneRenderWindowHovered() && mouseState.rightButton && !mouseState.leftButton) {
+	if (app->getModuleImGui().getIsSceneRenderWindowHovered() && mouseState.rightButton && !mouseState.leftButton) {
 		// Get the offset of the target relative to the camera
 		Vector3 offset = target - transform.position;
 
@@ -137,8 +137,8 @@ void ModuleCameraEditor::update() {
 		currentOrbitingDistance = (transform.position - target).Length();
 	}
 
-	if (app->getModuleImGui()->getIsSceneRenderWindowHovered() && kbState.F) {
-		Vector3 newTarget = app->getModuleAssignment2()->getTransform()->position;
+	if (app->getModuleImGui().getIsSceneRenderWindowHovered() && kbState.F) {
+		Vector3 newTarget = app->getModuleAssignment2().getTransform()->position;
 		transform.forward = newTarget - transform.position;
 		transform.forward.Normalize();
 		transform.right = transform.forward.Cross(Vector3(0.0f, 1.0f, 0.0f));

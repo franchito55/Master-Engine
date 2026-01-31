@@ -7,8 +7,7 @@
 extern Application* app;
 
 bool ModuleResources::init() {
-	app->setModuleResources(this);
-	device = app->getModuleD3D12()->getDevice();
+	device = app->getModuleD3D12().getDevice();
 
 	return true;
 }
@@ -18,7 +17,7 @@ void ModuleResources::createDefaultBuffer(ComPtr<ID3D12Resource>& resourceHandle
 	CD3DX12_HEAP_PROPERTIES vbHeapProps(D3D12_HEAP_TYPE_DEFAULT);
 	CD3DX12_RESOURCE_DESC vbResDesc = CD3DX12_RESOURCE_DESC::Buffer(bufferSize);
 	device->CreateCommittedResource(&vbHeapProps, D3D12_HEAP_FLAG_NONE, &vbResDesc, D3D12_RESOURCE_STATE_COMMON, nullptr, IID_PPV_ARGS(&resourceHandle));
-	app->getModuleD3D12()->flush();
+	app->getModuleD3D12().flush();
 }
 
 ComPtr<ID3D12Resource> ModuleResources::createDefaultBuffer(const unsigned int bufferSize) {
@@ -27,7 +26,7 @@ ComPtr<ID3D12Resource> ModuleResources::createDefaultBuffer(const unsigned int b
 	CD3DX12_HEAP_PROPERTIES vbHeapProps(D3D12_HEAP_TYPE_DEFAULT);
 	CD3DX12_RESOURCE_DESC vbResDesc = CD3DX12_RESOURCE_DESC::Buffer(bufferSize);
 	device->CreateCommittedResource(&vbHeapProps, D3D12_HEAP_FLAG_NONE, &vbResDesc, D3D12_RESOURCE_STATE_COMMON, nullptr, IID_PPV_ARGS(&resourceHandle));
-	app->getModuleD3D12()->flush();
+	app->getModuleD3D12().flush();
 	return resourceHandle;
 }
 
@@ -42,14 +41,14 @@ void ModuleResources::createDefaultBuffer(ComPtr<ID3D12Resource>& resourceHandle
 	// Default buffer -> heap type = DEFAULT (this buffer will be read by the GPU)
 	CD3DX12_HEAP_PROPERTIES vbHeapProps(D3D12_HEAP_TYPE_DEFAULT);
 	device->CreateCommittedResource(&vbHeapProps, D3D12_HEAP_FLAG_NONE, &bufferDesc, D3D12_RESOURCE_STATE_COMMON, nullptr, IID_PPV_ARGS(&resourceHandle));
-	app->getModuleD3D12()->flush();
+	app->getModuleD3D12().flush();
 }
 
 void ModuleResources::createDefaultBuffer(ComPtr<ID3D12Resource>& resourceHandle, D3D12_RESOURCE_DESC& bufferDesc, D3D12_RESOURCE_STATES resourceState) {
 	// Default buffer -> heap type = DEFAULT (this buffer will be read by the GPU)
 	CD3DX12_HEAP_PROPERTIES vbHeapProps(D3D12_HEAP_TYPE_DEFAULT);
 	device->CreateCommittedResource(&vbHeapProps, D3D12_HEAP_FLAG_NONE, &bufferDesc, resourceState, nullptr, IID_PPV_ARGS(&resourceHandle));
-	app->getModuleD3D12()->flush();
+	app->getModuleD3D12().flush();
 }
 
 void ModuleResources::createUploadBuffer(ComPtr<ID3D12Resource>& resourceHandle, const unsigned int bufferSize) {
@@ -57,7 +56,7 @@ void ModuleResources::createUploadBuffer(ComPtr<ID3D12Resource>& resourceHandle,
 	CD3DX12_HEAP_PROPERTIES sbHeapProps(D3D12_HEAP_TYPE_UPLOAD);
 	CD3DX12_RESOURCE_DESC sbResDesc = CD3DX12_RESOURCE_DESC::Buffer(bufferSize);
 	device->CreateCommittedResource(&sbHeapProps, D3D12_HEAP_FLAG_NONE, &sbResDesc, D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(&resourceHandle));
-	app->getModuleD3D12()->flush();
+	app->getModuleD3D12().flush();
 }
 
 void ModuleResources::createUploadBufferWithData(ComPtr<ID3D12Resource>& resourceHandle, const void* data, const unsigned int bufferSize) {
@@ -74,7 +73,7 @@ ComPtr<ID3D12Resource> ModuleResources::createUploadBuffer(const unsigned int bu
 	CD3DX12_HEAP_PROPERTIES sbHeapProps(D3D12_HEAP_TYPE_UPLOAD);
 	CD3DX12_RESOURCE_DESC sbResDesc = CD3DX12_RESOURCE_DESC::Buffer(bufferSize);
 	device->CreateCommittedResource(&sbHeapProps, D3D12_HEAP_FLAG_NONE, &sbResDesc, D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(&resourceHandle));
-	app->getModuleD3D12()->flush();
+	app->getModuleD3D12().flush();
 	return resourceHandle;
 }
 
@@ -92,15 +91,15 @@ void ModuleResources::copyDataToUploadBuffer(ComPtr<ID3D12Resource>& resourceHan
 }
 
 void ModuleResources::copyDataFromUploadBufferToDefaultBuffer(ComPtr<ID3D12Resource>& defaultBufferHandle, ComPtr<ID3D12Resource>& uploadBufferHandle) {
-	ID3D12GraphicsCommandList* copyCommandList = app->getModuleD3D12()->getCopyCommandList().Get();
-	ID3D12CommandAllocator* copyCommandAllocator = app->getModuleD3D12()->getCopyCommandAllocator().Get();
-	ID3D12CommandQueue* copyCommandQueue = app->getModuleD3D12()->getCopyCommandQueue().Get();
+	ID3D12GraphicsCommandList* copyCommandList = app->getModuleD3D12().getCopyCommandList().Get();
+	ID3D12CommandAllocator* copyCommandAllocator = app->getModuleD3D12().getCopyCommandAllocator().Get();
+	ID3D12CommandQueue* copyCommandQueue = app->getModuleD3D12().getCopyCommandQueue().Get();
 	copyCommandList->Reset(copyCommandAllocator, nullptr);
 	copyCommandList->CopyResource(defaultBufferHandle.Get(), uploadBufferHandle.Get());
  	copyCommandList->Close();
 	ID3D12CommandList* lists[] = { copyCommandList };
 	copyCommandQueue->ExecuteCommandLists(1, lists);
-	app->getModuleD3D12()->flush(copyCommandQueue);
+	app->getModuleD3D12().flush(copyCommandQueue);
 }
 
 ScratchImage ModuleResources::createTextureFromFile(const std::string& path, ComPtr<ID3D12Resource>& defaultBufferHandle, ComPtr<ID3D12Resource>& uploadBufferHandle) {
@@ -132,8 +131,8 @@ ScratchImage ModuleResources::createTextureFromFile(const std::string& path, Com
 		UINT(metaData.height), UINT16(metaData.arraySize),
 		UINT16(metaData.mipLevels));
 
-	app->getModuleResources()->createDefaultBuffer(defaultBufferHandle, texBufferDesc);
-	app->getModuleResources()->createUploadBuffer(uploadBufferHandle, GetRequiredIntermediateSize(defaultBufferHandle.Get(), 0, image.GetImageCount()));
+	app->getModuleResources().createDefaultBuffer(defaultBufferHandle, texBufferDesc);
+	app->getModuleResources().createUploadBuffer(uploadBufferHandle, GetRequiredIntermediateSize(defaultBufferHandle.Get(), 0, image.GetImageCount()));
 
 	std::vector<D3D12_SUBRESOURCE_DATA> subData;
 	subData.reserve(image.GetImageCount());
@@ -149,12 +148,12 @@ ScratchImage ModuleResources::createTextureFromFile(const std::string& path, Com
 	}
 
 	// Need to UpdateSubresources using mipLevels * arraySize (total number of Subresources)
-	UpdateSubresources(app->getModuleD3D12()->getCurrentBufferCommandList().Get(), defaultBufferHandle.Get(), uploadBufferHandle.Get(), 0, 0, UINT(metaData.mipLevels * metaData.arraySize), subData.data());
+	UpdateSubresources(app->getModuleD3D12().getCurrentBufferCommandList().Get(), defaultBufferHandle.Get(), uploadBufferHandle.Get(), 0, 0, UINT(metaData.mipLevels * metaData.arraySize), subData.data());
 	D3D12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition(defaultBufferHandle.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, D3D12_RESOURCE_BARRIER_FLAG_NONE);
-	app->getModuleD3D12()->getCurrentBufferCommandList()->ResourceBarrier(1, &barrier);
+	app->getModuleD3D12().getCurrentBufferCommandList()->ResourceBarrier(1, &barrier);
 
 
-	app->getModuleShaderDescriptors()->createGenericSRV(defaultBufferHandle.Get(), defaultBufferHandle->GetDesc().Format, defaultBufferHandle->GetDesc().MipLevels);
+	app->getModuleShaderDescriptors().createGenericSRV(defaultBufferHandle.Get(), defaultBufferHandle->GetDesc().Format, defaultBufferHandle->GetDesc().MipLevels);
 
 	return image;
 }

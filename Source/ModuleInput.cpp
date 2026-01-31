@@ -6,6 +6,8 @@
 #include "Mouse.h"
 #include "GamePad.h"
 
+extern Application* app;
+
 ModuleInput::ModuleInput(HWND hWnd)
 {
     keyboard = std::make_unique<Keyboard>();
@@ -16,7 +18,6 @@ ModuleInput::ModuleInput(HWND hWnd)
 }
 
 bool ModuleInput::init() {
-    app->setModuleInput(this);
 
     return true;
 }

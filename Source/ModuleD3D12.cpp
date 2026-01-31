@@ -10,8 +10,6 @@ ModuleD3D12::ModuleD3D12(HWND _hWnd) : hWnd(_hWnd) {}
 
 bool ModuleD3D12::init() {
 
-	app->setModuleD3D12(this);
-
 	enableDebugLayer();
 
 	const ComPtr<IDXGIFactory6> factory = initDevice();
@@ -36,7 +34,7 @@ bool ModuleD3D12::init() {
 // We need ModuleNonShaderDescriptors to have run its init, but ModuleNonShaderDescriptors needs ModuleD3D12 to have run its init...
 bool ModuleD3D12::postInit() {
 	recreateRTVs();
-	dsvIndex = app->getModuleNonShaderDescriptors()->createDSV(depthStencilBuffer.Get());
+	dsvIndex = app->getModuleNonShaderDescriptors().createDSV(depthStencilBuffer.Get());
 
 	return true;
 }
@@ -70,10 +68,10 @@ void ModuleD3D12::preRender() {
 	// Set depth buffer view's state back to WRITE
 	depthBufferBarrier = CD3DX12_RESOURCE_BARRIER::Transition(depthStencilBuffer.Get(), D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_DEPTH_WRITE);
 	//renderCommandLists[currentBackBufferIndex]->ResourceBarrier(1, &depthBufferBarrier);
-	D3D12_CPU_DESCRIPTOR_HANDLE dsvCpuHandle = app->getModuleNonShaderDescriptors()->getCPUHandleFromDSVHeap(dsvIndex);
+	D3D12_CPU_DESCRIPTOR_HANDLE dsvCpuHandle = app->getModuleNonShaderDescriptors().getCPUHandleFromDSVHeap(dsvIndex);
 	renderCommandLists[currentBackBufferIndex]->ClearDepthStencilView(dsvCpuHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0.0f, 0, nullptr);
 
-	D3D12_CPU_DESCRIPTOR_HANDLE rtvCpuHandle = app->getModuleNonShaderDescriptors()->getCPUHandleFromRTVHeap(rtvIndices[currentBackBufferIndex]);
+	D3D12_CPU_DESCRIPTOR_HANDLE rtvCpuHandle = app->getModuleNonShaderDescriptors().getCPUHandleFromRTVHeap(rtvIndices[currentBackBufferIndex]);
 	renderCommandLists[currentBackBufferIndex]->ClearRenderTargetView(rtvCpuHandle, color, 0, nullptr);
 }
 
@@ -147,13 +145,13 @@ void ModuleD3D12::resizeBuffers() {
 	// Release DSV
 	depthStencilBuffer.Reset();
 
-	app->getModuleNonShaderDescriptors()->reset();
+	app->getModuleNonShaderDescriptors().reset();
 
 	swapChain->ResizeBuffers(FRAME_BUFFER_NUM, windowResizedRect.right - windowResizedRect.left, windowResizedRect.bottom - windowResizedRect.top, DXGI_FORMAT_UNKNOWN, 0);
 	recreateRTVs();
 
 	// Re-create DSV
-	app->getModuleNonShaderDescriptors()->createDSV(depthStencilBuffer.Get());
+	app->getModuleNonShaderDescriptors().createDSV(depthStencilBuffer.Get());
 	
 	// swapChain->ResizeBuffers() RESETS the swap chain's current back buffer index 
 	// back to 0, so we need to update it here
@@ -274,7 +272,7 @@ void ModuleD3D12::recreateRTVs() {
 	for (UINT i = 0; i < FRAME_BUFFER_NUM; ++i)
 	{
 		swapChain->GetBuffer(i, IID_PPV_ARGS(&backBuffers[i]));
-		rtvIndices[i] = app->getModuleNonShaderDescriptors()->createRTV(backBuffers[i].Get());
+		rtvIndices[i] = app->getModuleNonShaderDescriptors().createRTV(backBuffers[i].Get());
 	}
 	float sceneRTVTextureWidth = sceneResizedRect.right - sceneResizedRect.left;
 	float sceneRTVTextureHeight = sceneResizedRect.bottom - sceneResizedRect.top;
@@ -303,11 +301,11 @@ void ModuleD3D12::recreateRTVs() {
 	clearValue.Color[3] = 1.0f;
 
 	CD3DX12_HEAP_PROPERTIES heapProps(D3D12_HEAP_TYPE_DEFAULT);
-	app->getModuleD3D12()->getDevice()->CreateCommittedResource(&heapProps, D3D12_HEAP_FLAG_NONE, &sceneRTVTextureDesc, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, &clearValue, IID_PPV_ARGS(&sceneRenderTexture));
-	sceneSRVIndexInHeap = app->getModuleShaderDescriptors()->createGenericSRV(sceneRenderTexture.Get(), DXGI_FORMAT_R8G8B8A8_UNORM, 1);
+	app->getModuleD3D12().getDevice()->CreateCommittedResource(&heapProps, D3D12_HEAP_FLAG_NONE, &sceneRTVTextureDesc, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, &clearValue, IID_PPV_ARGS(&sceneRenderTexture));
+	sceneSRVIndexInHeap = app->getModuleShaderDescriptors().createGenericSRV(sceneRenderTexture.Get(), DXGI_FORMAT_R8G8B8A8_UNORM, 1);
 	D3D12_RENDER_TARGET_VIEW_DESC sceneRTVDesc = {};
 	sceneRTVDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
 	sceneRTVDesc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
 	sceneRTVDesc.Texture2D.MipSlice = 0;
-	sceneRTVIndexInHeap = app->getModuleNonShaderDescriptors()->createRTV(sceneRenderTexture.Get(), sceneRTVDesc);
+	sceneRTVIndexInHeap = app->getModuleNonShaderDescriptors().createRTV(sceneRenderTexture.Get(), sceneRTVDesc);
 }

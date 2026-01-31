@@ -9,8 +9,7 @@
 extern Application* app;
 
 bool ModuleShaderDescriptors::init() {
-	app->setModuleShaderDescriptors(this);
-	device = app->getModuleD3D12()->getDevice();
+	device = app->getModuleD3D12().getDevice();
 	genericDescriptorSize = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 	samplerDescriptorSize = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
 
@@ -24,7 +23,7 @@ bool ModuleShaderDescriptors::init() {
 	shaderVisibleDescriptorHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
 	// Flags for multi-adapter. Which adapter this descriptor is for
 	shaderVisibleDescriptorHeapDesc.NodeMask = 0;
-	app->getModuleD3D12()->getDevice()->CreateDescriptorHeap(&shaderVisibleDescriptorHeapDesc, IID_PPV_ARGS(&genericSrvHeap));
+	app->getModuleD3D12().getDevice()->CreateDescriptorHeap(&shaderVisibleDescriptorHeapDesc, IID_PPV_ARGS(&genericSrvHeap));
 	genericSrvHeap->SetName(L"Generic SRV Heap");
 
 	// ============ Init descriptor heap for samplers ============
@@ -37,7 +36,7 @@ bool ModuleShaderDescriptors::init() {
 	samplerHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
 	// Flags for multi-adapter. Which adapter this descriptor is for
 	samplerHeapDesc.NodeMask = 0;
-	app->getModuleD3D12()->getDevice()->CreateDescriptorHeap(&samplerHeapDesc, IID_PPV_ARGS(&samplerHeap));
+	app->getModuleD3D12().getDevice()->CreateDescriptorHeap(&samplerHeapDesc, IID_PPV_ARGS(&samplerHeap));
 	samplerHeap->SetName(L"Sampler Heap");
 
 	return true;
