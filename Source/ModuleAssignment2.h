@@ -9,21 +9,6 @@
 class Application;
 extern Application* app;
 
-struct MvpCB
-{
-	Matrix mvp;
-};
-
-struct ModelMatrixCB
-{
-	Matrix modelMatrix;
-};
-
-struct NormalMatrixCB
-{
-	Matrix normalMatrix;
-};
-
 struct CameraCB
 {
 	Vector3 cameraPos; // 12B
@@ -59,15 +44,6 @@ public:
 	void postRender() override;
 	void createVertexBufferView(D3D12_VERTEX_BUFFER_VIEW* _vBV, GameObject& gO);
 	void createIndexBufferView(D3D12_INDEX_BUFFER_VIEW* _iBV, GameObject& gO);
-	Transform* getTransform() { return gameObject->getTransform(); }
-	Vector3* getObjectPosition() { return &gameObject->getTransform()->position; }
-	void setObjectPosition(const Vector3 position) { gameObject->getTransform()->position = position; }
-	Quaternion* getObjectRotation() { return &gameObject->getTransform()->rotation; }
-	void setObjectRotation(const Quaternion rotation) { gameObject->getTransform()->rotation = rotation; }
-	Vector3* getObjectScale() { return &gameObject->getTransform()->scale; }
-	void setObjectScale(const Vector3 scale) { gameObject->getTransform()->scale = scale; }
-
-	Matrix* getModelMatrix() { return &model; } // Return * for ImGui editing
 
 	int* getCurrentTextureFilteringMode() { return &currentTextureFiltering; } // Return * for ImGui editing
 	void setTextureFilteringChanged(bool _textureFilteringChanged) { textureFilteringChanged = _textureFilteringChanged; }
@@ -80,6 +56,11 @@ public:
 	Vector3* getMaterialDiffuse() { return &pbrMaterialDiffuse; }
 	Vector3* getMaterialFresnel0() { return &pbrMaterialFresnel0; }
 	float* getMaterialN() { return &pbrMaterialN; }
+
+	// Frustum culling, multiple objects in scene
+	void renderGameObject(GameObject* gameObject, ComPtr<ID3D12GraphicsCommandList> commandList);
+
+	std::vector<GameObject*> getGameObjects() const { return gameObjects; }
 
 private:
 	HWND hWnd;
@@ -98,21 +79,7 @@ private:
 	D3D12_GPU_DESCRIPTOR_HANDLE textureSrvGpuHandle, textureSamplerGpuHandle;
 
 
-	GameObject* gameObject = nullptr;
-
-	Matrix model;
-	Matrix mvp;
-
 	DebugDrawPass* debugDrawPass;
-
-	ComPtr<ID3D12Resource> mvpCB = nullptr;
-	MvpCB* mvpData = nullptr;
-
-	ComPtr<ID3D12Resource> modelCB = nullptr;
-	ModelMatrixCB* modelData = nullptr;
-
-	ComPtr<ID3D12Resource> normalCB = nullptr;
-	NormalMatrixCB* normalData = nullptr;
 
 	ComPtr<ID3D12Resource> cameraCB = nullptr;
 	CameraCB* cameraData = nullptr;
@@ -143,9 +110,11 @@ private:
 
 	void buildRootSignature();
 	void buildPSO();
-	void initConstantBufferViews();
+	void initConstantBufferViews(GameObject* gameObject);
 
 	D3D12_FILTER imGuiFilteringToDX12(unsigned int imGuiIndex);
 	D3D12_TEXTURE_ADDRESS_MODE imGuiAddressingToDX12(unsigned int imGuiIndex);
 	GameObject* createGameObjectFromGLTF(const std::string fileName, unsigned int meshIndex, unsigned int primitiveIndex);
+
+	std::vector<GameObject*> gameObjects;
 };

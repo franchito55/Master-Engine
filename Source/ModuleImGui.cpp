@@ -25,7 +25,7 @@ bool ModuleImGui::init() {
 	moduleD3D12 = &app->getModuleD3D12();
 	moduleCameraEditor = &app->getModuleCameraEditor();
 	sceneRenderWindowSize = { 400, 400 };
-	uiRotationDeg = app->getModuleAssignment2().getObjectRotation()->ToEuler() * RAD2DEG;
+	uiRotationDeg = app->getModuleAssignment2().getGameObjects().at(0)->getTransform().rotation.ToEuler() * RAD2DEG;
 
 	// ============ Init ImGui wrapper ============
 	unsigned int descriptorsIndex = app->getModuleShaderDescriptors().allocateDescriptor();
@@ -119,7 +119,7 @@ void ModuleImGui::showGeometryInfoWindow() {
 	ImGui::Begin("Geometry");
 	Matrix cameraViewMatrix = moduleCameraEditor->getViewMatrix();
 	Matrix cameraProjectionMatrix = moduleCameraEditor->getProjectionMatrix();
-	Matrix* model = app->getModuleAssignment2().getModelMatrix();
+	Matrix* model = &app->getModuleAssignment2().getGameObjects().at(0)->getModelMatrix();
 
 	if (ImGui::IsKeyPressed(ImGuiKey_T))
 		mCurrentGizmoOperation = ImGuizmo::TRANSLATE;
@@ -136,12 +136,12 @@ void ModuleImGui::showGeometryInfoWindow() {
 	if (ImGui::RadioButton("Scale [E]", mCurrentGizmoOperation == ImGuizmo::SCALE))
 		mCurrentGizmoOperation = ImGuizmo::SCALE;
 
-	Vector3* position = app->getModuleAssignment2().getObjectPosition();
-	Vector3* scale = app->getModuleAssignment2().getObjectScale();
+	Vector3 position = app->getModuleAssignment2().getGameObjects().at(0)->getTransform().position;
+	Vector3 scale = app->getModuleAssignment2().getGameObjects().at(0)->getTransform().scale;
 	Vector3 rotationBefore = uiRotationDeg;
-	ImGui::DragFloat3("Position", &position->x, 0.1f, -40.0f, 40.0f);
+	ImGui::DragFloat3("Position", &position.x, 0.1f, -40.0f, 40.0f);
 	ImGui::DragFloat3("Rotation", &uiRotationDeg.x, 1.0f, -360.0f, 360.0f);
-	ImGui::DragFloat3("Scale", &scale->x, 0.001f, -10.0f, 10.0f);
+	ImGui::DragFloat3("Scale", &scale.x, 0.001f, -10.0f, 10.0f);
 
 	if (mCurrentGizmoOperation != ImGuizmo::SCALE)
 	{
@@ -152,26 +152,32 @@ void ModuleImGui::showGeometryInfoWindow() {
 			mCurrentGizmoMode = ImGuizmo::WORLD;
 	}
 	if (ImGuizmo::IsUsing()) {
+		Transform newTransform = app->getModuleAssignment2().getGameObjects().at(0)->getTransform();
 		float matrixTranslation[3], matrixRotation[3], matrixScale[3];
 		ImGuizmo::DecomposeMatrixToComponents(&model->_11, matrixTranslation, matrixRotation, matrixScale);
-		app->getModuleAssignment2().setObjectPosition(Vector3(matrixTranslation[0], matrixTranslation[1], matrixTranslation[2]));
-		app->getModuleAssignment2().setObjectScale(Vector3(matrixScale[0], matrixScale[1], matrixScale[2]));
+		Vector3 newObjectPosition = Vector3(matrixTranslation[0], matrixTranslation[1], matrixTranslation[2]);
+		newTransform.position = newObjectPosition;
+		newTransform.scale = Vector3(matrixScale[0], matrixScale[1], matrixScale[2]);
 		Matrix deltaModelMatrix = modelMatrixBeforeGizmo.Invert() * *model;
 		Quaternion deltaRotation = Quaternion::CreateFromRotationMatrix(deltaModelMatrix);
-		Quaternion currRotation = *app->getModuleAssignment2().getObjectRotation();
 		Quaternion finalRotation;
 		if (mCurrentGizmoMode == ImGuizmo::LOCAL)
-			finalRotation = deltaRotation * currRotation;
+			finalRotation = deltaRotation * newTransform.rotation;
 		else
-			finalRotation = currRotation * deltaRotation;
+			finalRotation = newTransform.rotation * deltaRotation;
 		finalRotation.Normalize();
-		app->getModuleAssignment2().setObjectRotation(finalRotation);
+		newTransform.rotation = finalRotation;
 		uiRotationDeg = finalRotation.ToEuler() * RAD2DEG;
+		app->getModuleAssignment2().getGameObjects().at(0)->setTransform(newTransform);
 	}
-	else if (uiRotationDeg != rotationBefore) {
+	else {
 		Vector3 newRotationDeg = uiRotationDeg * DEG2RAD;
 		Quaternion newRotation = Quaternion::CreateFromYawPitchRoll(newRotationDeg.y, newRotationDeg.x, newRotationDeg.z);
-		app->getModuleAssignment2().setObjectRotation(newRotation);
+		Transform newTransform = app->getModuleAssignment2().getGameObjects().at(0)->getTransform();
+		newTransform.position = position;
+		newTransform.scale = scale;
+		newTransform.rotation = newRotation;
+		app->getModuleAssignment2().getGameObjects().at(0)->setTransform(newTransform);
 	}
 
 	ImGui::End();
@@ -335,7 +341,7 @@ void ModuleImGui::showSceneRenderWindow() {
 	// Gizmo
 	Matrix cameraViewMatrix = moduleCameraEditor->getViewMatrix();
 	Matrix cameraProjectionMatrix = moduleCameraEditor->getProjectionMatrix();
-	Matrix* model = app->getModuleAssignment2().getModelMatrix();
+	Matrix* model = &app->getModuleAssignment2().getGameObjects().at(0)->getModelMatrix();
 	ImGuizmo::SetRect(
 		sceneRenderWindowPos.x + sceneRenderWindowImageRectMin.x,
 		sceneRenderWindowPos.y + sceneRenderWindowImageRectMin.y,

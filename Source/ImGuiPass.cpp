@@ -41,7 +41,7 @@ ImGuiPass::ImGuiPass(ID3D12Device2* device, HWND hWnd, D3D12_CPU_DESCRIPTOR_HAND
 
     // Setup Platform/Renderer backends
     ImGui_ImplWin32_Init(hWnd);
-    ImGui_ImplDX12_Init(device, FRAMES_IN_FLIGHT, DXGI_FORMAT_R8G8B8A8_UNORM, app->getModuleShaderDescriptors().getDescriptorHeap(), cpuTextHandle, gpuTextHandle);
+    ImGui_ImplDX12_Init(device, FRAMES_IN_FLIGHT, DXGI_FORMAT_R8G8B8A8_UNORM, app->getModuleShaderDescriptors().getDescriptorHeap().Get(), cpuTextHandle, gpuTextHandle);
 
     // Load Fonts
     // - If no fonts are loaded, dear imgui will use the default font. You can also load multiple fonts and use ImGui::PushFont()/PopFont() to select them.

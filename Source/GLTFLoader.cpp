@@ -78,16 +78,16 @@ bool GLTFLoader::loadMeshIntoGameObjectGLTF(const tinygltf::Model& model, unsign
 		GLTFLoader::loadGLTFAccessorData(vertexData + offsetof(Vertex, position), sizeof(Vector3), sizeof(Vertex), numVertices, model, itPos->second);
 		GLTFLoader::loadGLTFAccessorData(vertexData + offsetof(Vertex, normal), sizeof(Vector3), sizeof(Vertex), numVertices, model, primitive.attributes, "NORMAL");
 		GLTFLoader::loadGLTFAccessorData(vertexData + offsetof(Vertex, texCoord), sizeof(Vector2), sizeof(Vertex), numVertices, model, primitive.attributes, "TEXCOORD_0");
-		gameObject->getMesh()->setVertices(vertices);
-		gameObject->getMesh()->setNumVertices(numVertices);
+		gameObject->getMesh().setVertices(vertices);
+		gameObject->getMesh().setNumVertices(numVertices);
 
 		// Load indices into Mesh
 		uint32_t numIndices = model.accessors.at(primitive.indices).count;
 		unsigned short* indices = new unsigned short[numIndices];
 		uint8_t* indexData = (uint8_t*)indices; // Casts Vertex Buffer to Bytes (uint8_t*) buffer
 		GLTFLoader::loadGLTFAccessorData(indexData, sizeof(unsigned short), sizeof(unsigned short), numIndices, model, primitive.indices);
-		gameObject->getMesh()->setIndices(indices);
-		gameObject->getMesh()->setNumIndices(numIndices);
+		gameObject->getMesh().setIndices(indices);
+		gameObject->getMesh().setNumIndices(numIndices);
 
 		// Load material data
 		Material* mat = new Material();

@@ -28,7 +28,7 @@ VertexOutput main(float3 pos : MY_POS, float2 texCoord : TEXCOORD, float3 normal
     output.position = mul(float4(pos, 1.0), mvp);
     output.texCoord = texCoord;
 
-    output.normal = mul(normalMatrix, normal); // Normal interpolated
+    output.normal = mul(normal, normalMatrix); // Normal post-multiplied
     float4 worldPos = mul(float4(pos, 1.0), modelMatrix);
     output.worldPosition = worldPos.xyz;
 

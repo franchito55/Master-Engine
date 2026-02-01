@@ -8,8 +8,8 @@ public:
 	Material() {}
 	~Material() {}
 
-	Texture* getTexture() { return texture; }
-	void setTexture(Texture* _texture) { texture = _texture; }
+	const Texture& getTexture() { return *texture; }
+	void setTexture(Texture& _texture) { texture = &_texture; }
 
 	float getMetallicFactor() { return metallicFactor; }
 	void setMetallicFactor(float _metallicFactor) { metallicFactor = _metallicFactor; }

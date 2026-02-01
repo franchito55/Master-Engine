@@ -43,7 +43,7 @@ public:
 
 	unsigned int getSceneRTVIndexInHeap() { return sceneRTVIndexInHeap; }
 	unsigned int getSceneSRVIndexInHeap() { return sceneSRVIndexInHeap; }
-	ID3D12Resource* getSceneRenderTexture() { return sceneRenderTexture.Get(); }
+	ComPtr<ID3D12Resource> getSceneRenderTexture() { return sceneRenderTexture; }
 
 private:
 	HWND hWnd;

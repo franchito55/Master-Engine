@@ -138,7 +138,7 @@ void ModuleCameraEditor::update() {
 	}
 
 	if (app->getModuleImGui().getIsSceneRenderWindowHovered() && kbState.F) {
-		Vector3 newTarget = app->getModuleAssignment2().getTransform()->position;
+		Vector3 newTarget = app->getModuleAssignment2().getGameObjects().at(0)->getTransform().position;
 		transform.forward = newTarget - transform.position;
 		transform.forward.Normalize();
 		transform.right = transform.forward.Cross(Vector3(0.0f, 1.0f, 0.0f));

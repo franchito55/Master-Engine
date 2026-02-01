@@ -8,8 +8,8 @@ public:
 
 	bool init() override;
 
-	ID3D12DescriptorHeap* getRTVHeap() { return rtvHeap.Get(); }
-	ID3D12DescriptorHeap* getDSVHeap() { return dsvHeap.Get(); }
+	ComPtr<ID3D12DescriptorHeap> getRTVHeap() { return rtvHeap; }
+	ComPtr<ID3D12DescriptorHeap> getDSVHeap() { return dsvHeap; }
 
 	unsigned int createRTV(ID3D12Resource* resource);
 	unsigned int createRTV(ID3D12Resource* resource, D3D12_RENDER_TARGET_VIEW_DESC& desc);

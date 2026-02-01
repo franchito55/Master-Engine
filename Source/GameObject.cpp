@@ -6,6 +6,9 @@
 GameObject::GameObject() {
 	mesh = new Mesh();
 	material = new Material();
+	model = Matrix::CreateScale(transform.scale) *
+		Matrix::CreateFromQuaternion(transform.rotation) *
+		Matrix::CreateTranslation(transform.position);
 }
 GameObject::~GameObject() {
 	// What to do? Multiple GameObjects might be pointing to same mesh/texture
