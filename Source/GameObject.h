@@ -20,6 +20,10 @@ struct NormalMatrixCB
 	Matrix normalMatrix;
 };
 
+struct AABB {
+	Vector3 points[8];
+};
+
 class GameObject {
 public:
 	GameObject();
@@ -39,29 +43,34 @@ public:
 	const Matrix& getMvpMatrix() const { return mvp; }
 	void setMvpMatrix(Matrix _mvp) { mvp = _mvp; }
 
-	ComPtr<ID3D12Resource> getMvpCB() { return mvpCB; }
-	void setMvpCB(ComPtr<ID3D12Resource> _mvpCB) { mvpCB = _mvpCB; }
+	ComPtr<ID3D12Resource>& getMvpCB() { return mvpCB; }
+	void setMvpCB(ComPtr<ID3D12Resource>& _mvpCB) { mvpCB = _mvpCB; }
 
-	ComPtr<ID3D12Resource> getModelCB() { return modelCB; }
-	void setModelCB(ComPtr<ID3D12Resource> _modelCB) { modelCB = modelCB; }
+	ComPtr<ID3D12Resource>& getModelCB() { return modelCB; }
+	void setModelCB(ComPtr<ID3D12Resource>& _modelCB) { modelCB = modelCB; }
 
-	ComPtr<ID3D12Resource> getNormalCB() { return normalCB; }
-	void setNormalCB(ComPtr<ID3D12Resource> normalCB) { normalCB = normalCB; }
+	ComPtr<ID3D12Resource>& getNormalCB() { return normalCB; }
+	void setNormalCB(ComPtr<ID3D12Resource>& normalCB) { normalCB = normalCB; }
 
-	MvpCB* getMvpData() const { return mvpData; }
+	MvpCB*& getMvpData() { return mvpData; }
 	void setMvpData(MvpCB* _mvpData) { mvpData = _mvpData; }
 
-	ModelMatrixCB* getModelMatrixData() const { return modelData; }
+	ModelMatrixCB*& getModelMatrixData() { return modelData; }
 	void setModelMatrixData(ModelMatrixCB* _modelMatrixData) { modelData = _modelMatrixData; }
 
-	NormalMatrixCB* getNormalData() const { return normalData; }
-	void setMvpData(NormalMatrixCB* _normalData) { normalData = _normalData; }
+	NormalMatrixCB*& getNormalData() { return normalData; }
+	void setNormalData(NormalMatrixCB* _normalData) { normalData = _normalData; }
+
+	AABB getAABB() const { return aabb; }
+	void setAABB(AABB _aabb) { aabb = _aabb; }
+
+
+	virtual void render(ComPtr<ID3D12GraphicsCommandList> commandList, D3D12_VERTEX_BUFFER_VIEW& vBV, D3D12_INDEX_BUFFER_VIEW& iBV);
+	virtual void update() {};
 
 private:
 	Mesh* mesh = nullptr;
 	Material* material = nullptr;
-	Transform transform = {};
-	Matrix model;
 	Matrix mvp;
 
 	ComPtr<ID3D12Resource> mvpCB = nullptr;
@@ -72,4 +81,10 @@ private:
 
 	ComPtr<ID3D12Resource> normalCB = nullptr;
 	NormalMatrixCB* normalData = nullptr;
+
+	AABB aabb = {};
+	
+protected:
+	Transform transform = {};
+	Matrix model;
 };

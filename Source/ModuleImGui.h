@@ -74,6 +74,7 @@ private:
 	void showConsoleWindow();
 	void showCameraInfoWindow();
 	void showSceneRenderWindow();
+	void showGameCameraParamsWindow();
 
 	bool compareVectors(float* v0, float* v1);
 };

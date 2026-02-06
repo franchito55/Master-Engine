@@ -1,11 +1,10 @@
-﻿  DirectXTexUtil.cpp
-  BC.cpp
+﻿  BC.cpp
+  BC4BC5.cpp
 C:\Users\Fran\Documents\Master\C++ for Video Games\Engine\Source\3rdParty\DirectXTex\BC.h(53,5): warning C5267: la definición de operador de asignaciones implícita para 'DirectX::HDRColorA' está en desuso porque tiene un constructor de copia proporcionado por el usuario
   (compilando archivo de origen "/BC.cpp")
       C:\Users\Fran\Documents\Master\C++ for Video Games\Engine\Source\3rdParty\DirectXTex\BC.cpp(500,20):
       el operador de asignaciones implícito para 'DirectX::HDRColorA' se requiere primero aquí
   
-  BC4BC5.cpp
   BC6HBC7.cpp
 C:\Users\Fran\Documents\Master\C++ for Video Games\Engine\Source\3rdParty\DirectXTex\BC.h(53,5): warning C5267: la definición de operador de asignaciones implícita para 'DirectX::HDRColorA' está en desuso porque tiene un constructor de copia proporcionado por el usuario
   (compilando archivo de origen "/BC6HBC7.cpp")
@@ -18,31 +17,5 @@ C:\Users\Fran\Documents\Master\C++ for Video Games\Engine\Source\3rdParty\Direct
       el operador de asignaciones implícito para '`anonymous-namespace'::INTColor' se requiere primero aquí
   
   BCDirectCompute.cpp
-  DirectXTexCompress.cpp
-  DirectXTexCompressGPU.cpp
-  DirectXTexConvert.cpp
-  DirectXTexD3D11.cpp
-  DirectXTexD3D12.cpp
-C:\Users\Fran\Documents\Master\C++ for Video Games\Engine\Source\3rdParty\DirectXTex\d3dx12.h(2422,13): warning C4062: no se controla el enumerador 'D3D_ROOT_SIGNATURE_VERSION_1_2' en el modificador de enumeración 'D3D_ROOT_SIGNATURE_VERSION'
-  (compilando archivo de origen "/DirectXTexD3D12.cpp")
-      C:\Program Files (x86)\Windows Kits\10\Include\10.0.26100.0\um\d3d12.h(2491,6):
-      vea la declaración de 'D3D_ROOT_SIGNATURE_VERSION'
-  
-C:\Users\Fran\Documents\Master\C++ for Video Games\Engine\Source\3rdParty\DirectXTex\d3dx12.h(2427,5): warning C4062: no se controla el enumerador 'D3D_ROOT_SIGNATURE_VERSION_1_2' en el modificador de enumeración 'D3D_ROOT_SIGNATURE_VERSION'
-  (compilando archivo de origen "/DirectXTexD3D12.cpp")
-      C:\Program Files (x86)\Windows Kits\10\Include\10.0.26100.0\um\d3d12.h(2491,6):
-      vea la declaración de 'D3D_ROOT_SIGNATURE_VERSION'
-  
-  DirectXTexDDS.cpp
-  DirectXTexFlipRotate.cpp
-  DirectXTexHDR.cpp
-  DirectXTexImage.cpp
-  DirectXTexMipMaps.cpp
-  DirectXTexMisc.cpp
-  DirectXTexNormalMaps.cpp
-  DirectXTexPMAlpha.cpp
-  DirectXTexResize.cpp
-  DirectXTexTGA.cpp
-  DirectXTexWIC.cpp
   Generando código...
   DirectXTex_Desktop_2022_Win10.vcxproj -> C:\Users\Fran\Documents\Master\C++ for Video Games\Engine\Source\3rdParty\DirectXTex\Bin\Desktop_2022_Win10\x64\Debug\DirectXTex.lib

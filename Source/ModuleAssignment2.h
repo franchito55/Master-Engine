@@ -6,6 +6,8 @@
 #include "Mesh.h"
 #include "GameObject.h"
 
+class CameraComponent;
+
 class Application;
 extern Application* app;
 
@@ -62,6 +64,10 @@ public:
 
 	std::vector<GameObject*> getGameObjects() const { return gameObjects; }
 
+	inline UINT align256(UINT size);
+
+	CameraComponent* getCameraComponent() const { return cameraComponent; }
+
 private:
 	HWND hWnd;
 	ComPtr<ID3D12PipelineState> pso = nullptr;
@@ -116,5 +122,9 @@ private:
 	D3D12_TEXTURE_ADDRESS_MODE imGuiAddressingToDX12(unsigned int imGuiIndex);
 	GameObject* createGameObjectFromGLTF(const std::string fileName, unsigned int meshIndex, unsigned int primitiveIndex);
 
+	void addGridOfDucks();
+
 	std::vector<GameObject*> gameObjects;
+
+	CameraComponent* cameraComponent;
 };
