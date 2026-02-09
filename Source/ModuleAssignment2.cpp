@@ -15,8 +15,7 @@
 #include "ModuleShaderDescriptors.h"
 #include "ModuleNonShaderDescriptors.h"
 #include "ModuleImGui.h"
-
-#define PI 3.14159265359
+#include "CameraComponent.h"
 
 #if defined(_DEBUG)
 #define ASSETS_RELATIVE_PATH "../"
@@ -31,19 +30,21 @@ bool ModuleAssignment2::init() {
 	// Read the vertex and index buffers and the texture from GLTF and pack them into a GameObject
 	// The duck is HUGE for some reason (hundreds of units big)
 
-	gameObjects.push_back(createGameObjectFromGLTF("Duck.gltf", 0, 0));
-	gameObjects.at(0)->getTransform().position = Vector3(0.0f, 0.0f, 0.0f);
+	addGridOfDucks();
+	/*gameObjects.at(0)->getTransform().position = Vector3(0.0f, 0.0f, 0.0f);
 	gameObjects.at(0)->getTransform().scale = Vector3(0.01f, 0.01f, 0.01f);
 	gameObjects.push_back(createGameObjectFromGLTF("Duck.gltf", 0, 0));
 	gameObjects.at(1)->getTransform().position = Vector3(-2.0f, 0.0f, 0.0f);
 	gameObjects.at(1)->getTransform().scale = Vector3(0.01f, 0.01f, 0.01f);
 	gameObjects.push_back(createGameObjectFromGLTF("Duck.gltf", 0, 0));
 	gameObjects.at(2)->getTransform().position = Vector3(2.0f, 0.0f, 0.0f);
-	gameObjects.at(2)->getTransform().scale = Vector3(0.01f, 0.01f, 0.01f);
+	gameObjects.at(2)->getTransform().scale = Vector3(0.01f, 0.01f, 0.01f);*/
+	cameraComponent = new CameraComponent();
 
 	for (unsigned int i = 0; i < gameObjects.size(); i++) {
 		initConstantBufferViews(gameObjects.at(i));
 	}
+	initConstantBufferViews(cameraComponent);
 
 	// Create and map once cameraCB (this would normally be on the Camera --> move to Camera)
 	app->getModuleResources().createUploadBuffer(cameraCB, sizeof(CameraCB));
@@ -141,9 +142,12 @@ void ModuleAssignment2::render() {
 	
 	commandList->SetGraphicsRootDescriptorTable(3, srvHeap->GetGPUDescriptorHandleForHeapStart());
 
-	for (unsigned int i = 0; i < gameObjects.size(); i++) {
-		renderGameObject(gameObjects.at(i), commandList);
+	for (unsigned int i = 0; i < gameObjects.size()-1; i++) {
+		if (cameraComponent->test(gameObjects.at(i)->getAABB())) {
+			gameObjects.at(i)->render(commandList, vBV, iBV);
+		}
 	}
+	cameraComponent->render(commandList, vBV, iBV);
 
 	// Draw debug info last so it's on top
 	debugDrawPass->record(commandList.Get(), app->getSceneRenderWindowWidth(), app->getSceneRenderWindowHeight(), app->getModuleCameraEditor().getViewMatrix(), app->getModuleCameraEditor().getProjectionMatrix());
@@ -160,7 +164,7 @@ void ModuleAssignment2::renderGameObject(GameObject* gameObject, ComPtr<ID3D12Gr
 	gameObject->setModelMatrix(Matrix::CreateScale(gameObject->getTransform().scale) *
 		Matrix::CreateFromQuaternion(gameObject->getTransform().rotation) *
 		Matrix::CreateTranslation(gameObject->getTransform().position));
-	gameObject->setMvpMatrix(gameObject->getModelMatrix() * app->getModuleCameraEditor().getViewMatrix() * app->getModuleCameraEditor().getProjectionMatrix().Transpose());
+	gameObject->setMvpMatrix((gameObject->getModelMatrix() * app->getModuleCameraEditor().getViewMatrix() * app->getModuleCameraEditor().getProjectionMatrix()).Transpose());
 
 	// Set cbuffers
 	gameObject->getMvpData()->mvp = gameObject->getMvpMatrix();
@@ -340,18 +344,31 @@ GameObject* ModuleAssignment2::createGameObjectFromGLTF(const std::string fileNa
 void ModuleAssignment2::initConstantBufferViews(GameObject* gameObject) {
 	ComPtr<ID3D12Device> device = app->getModuleD3D12().getDevice();
 	// Create and map once MvpCB
-	app->getModuleResources().createDefaultBuffer(sizeof(MvpCB));
-	ComPtr<ID3D12Resource> mvpCB = gameObject->getMvpCB();
-	app->getModuleResources().createUploadBuffer(mvpCB, (unsigned int)sizeof(MvpCB));
-	gameObject->getMvpCB()->Map(0, nullptr, reinterpret_cast<void**>(gameObject->getMvpData()));
+	app->getModuleResources().createDefaultBuffer(align256(sizeof(MvpCB)));
+	app->getModuleResources().createUploadBuffer(gameObject->getMvpCB(), align256((unsigned int)sizeof(MvpCB)));
+	HRESULT hr = gameObject->getMvpCB()->Map(0, nullptr, reinterpret_cast<void**>(&gameObject->getMvpData()));
 
 	// Create and map once ModelCB
-	ComPtr<ID3D12Resource> modelCB = gameObject->getModelCB();
-	app->getModuleResources().createUploadBuffer(modelCB, sizeof(ModelMatrixCB));
-	gameObject->getModelCB()->Map(0, nullptr, reinterpret_cast<void**>(gameObject->getModelMatrixData()));
+	app->getModuleResources().createUploadBuffer(gameObject->getModelCB(), align256(sizeof(ModelMatrixCB)));
+	hr = gameObject->getModelCB()->Map(0, nullptr, reinterpret_cast<void**>(&gameObject->getModelMatrixData()));
 
 	// Create and map once normalCB
-	ComPtr<ID3D12Resource> normalCB = gameObject->getModelCB();
-	app->getModuleResources().createUploadBuffer(normalCB, sizeof(NormalMatrixCB));
-	gameObject->getNormalCB()->Map(0, nullptr, reinterpret_cast<void**>(gameObject->getNormalData()));
+	app->getModuleResources().createUploadBuffer(gameObject->getNormalCB(), align256(sizeof(NormalMatrixCB)));
+	hr = gameObject->getNormalCB()->Map(0, nullptr, reinterpret_cast<void**>(&gameObject->getNormalData()));
+}
+
+inline UINT ModuleAssignment2::align256(UINT size)
+{
+	return (size + 255) & ~255;
+}
+
+void ModuleAssignment2::addGridOfDucks() {
+	for (unsigned int x = 0; x < 5; x++) {
+		for (unsigned int y = 0; y < 5; y++) {
+			GameObject* gO = createGameObjectFromGLTF("Duck.gltf", 0, 0);
+			gO->getTransform().position = Vector3(x * rand() % 21 - 10.5f, rand() % 21 - 10.5f, y * rand() % 21 - 10.5f);
+			gO->getTransform().scale = Vector3(0.01f, 0.01f, 0.01f);
+			gameObjects.push_back(gO);
+		}
+	}
 }

@@ -10,6 +10,7 @@
 #include "ModuleInput.h"
 #include "Keyboard.h"
 #include "Mouse.h"
+#include "CameraComponent.h"
 
 #define MAX_ORBITING_DISTANCE 30.0f
 #define MIN_ORBITING_DISTANCE 0.3f
@@ -25,7 +26,7 @@ bool ModuleImGui::init() {
 	moduleD3D12 = &app->getModuleD3D12();
 	moduleCameraEditor = &app->getModuleCameraEditor();
 	sceneRenderWindowSize = { 400, 400 };
-	uiRotationDeg = app->getModuleAssignment2().getGameObjects().at(0)->getTransform().rotation.ToEuler() * RAD2DEG;
+	uiRotationDeg = app->getModuleAssignment2().getCameraComponent()->getTransform().rotation.ToEuler() * RAD2DEG;
 
 	// ============ Init ImGui wrapper ============
 	unsigned int descriptorsIndex = app->getModuleShaderDescriptors().allocateDescriptor();
@@ -52,6 +53,7 @@ void ModuleImGui::render() {
 	showMaterialInfoWindow();
 	showSceneRenderWindow();
 	showGeometryInfoWindow();
+	showGameCameraParamsWindow();
 
 	fpsCount++;
 
@@ -119,7 +121,7 @@ void ModuleImGui::showGeometryInfoWindow() {
 	ImGui::Begin("Geometry");
 	Matrix cameraViewMatrix = moduleCameraEditor->getViewMatrix();
 	Matrix cameraProjectionMatrix = moduleCameraEditor->getProjectionMatrix();
-	Matrix* model = &app->getModuleAssignment2().getGameObjects().at(0)->getModelMatrix();
+	Matrix* model = &app->getModuleAssignment2().getCameraComponent()->getModelMatrix();
 
 	if (ImGui::IsKeyPressed(ImGuiKey_T))
 		mCurrentGizmoOperation = ImGuizmo::TRANSLATE;
@@ -136,8 +138,8 @@ void ModuleImGui::showGeometryInfoWindow() {
 	if (ImGui::RadioButton("Scale [E]", mCurrentGizmoOperation == ImGuizmo::SCALE))
 		mCurrentGizmoOperation = ImGuizmo::SCALE;
 
-	Vector3 position = app->getModuleAssignment2().getGameObjects().at(0)->getTransform().position;
-	Vector3 scale = app->getModuleAssignment2().getGameObjects().at(0)->getTransform().scale;
+	Vector3 position = app->getModuleAssignment2().getCameraComponent()->getTransform().position;
+	Vector3 scale = app->getModuleAssignment2().getCameraComponent()->getTransform().scale;
 	Vector3 rotationBefore = uiRotationDeg;
 	ImGui::DragFloat3("Position", &position.x, 0.1f, -40.0f, 40.0f);
 	ImGui::DragFloat3("Rotation", &uiRotationDeg.x, 1.0f, -360.0f, 360.0f);
@@ -152,7 +154,7 @@ void ModuleImGui::showGeometryInfoWindow() {
 			mCurrentGizmoMode = ImGuizmo::WORLD;
 	}
 	if (ImGuizmo::IsUsing()) {
-		Transform newTransform = app->getModuleAssignment2().getGameObjects().at(0)->getTransform();
+		Transform newTransform = app->getModuleAssignment2().getCameraComponent()->getTransform();
 		float matrixTranslation[3], matrixRotation[3], matrixScale[3];
 		ImGuizmo::DecomposeMatrixToComponents(&model->_11, matrixTranslation, matrixRotation, matrixScale);
 		Vector3 newObjectPosition = Vector3(matrixTranslation[0], matrixTranslation[1], matrixTranslation[2]);
@@ -168,16 +170,18 @@ void ModuleImGui::showGeometryInfoWindow() {
 		finalRotation.Normalize();
 		newTransform.rotation = finalRotation;
 		uiRotationDeg = finalRotation.ToEuler() * RAD2DEG;
-		app->getModuleAssignment2().getGameObjects().at(0)->setTransform(newTransform);
+		app->getModuleAssignment2().getCameraComponent()->setTransform(newTransform);
+		app->getModuleAssignment2().getCameraComponent()->recalculateFrustum();
 	}
 	else {
 		Vector3 newRotationDeg = uiRotationDeg * DEG2RAD;
 		Quaternion newRotation = Quaternion::CreateFromYawPitchRoll(newRotationDeg.y, newRotationDeg.x, newRotationDeg.z);
-		Transform newTransform = app->getModuleAssignment2().getGameObjects().at(0)->getTransform();
+		Transform newTransform = app->getModuleAssignment2().getCameraComponent()->getTransform();
 		newTransform.position = position;
 		newTransform.scale = scale;
 		newTransform.rotation = newRotation;
-		app->getModuleAssignment2().getGameObjects().at(0)->setTransform(newTransform);
+		app->getModuleAssignment2().getCameraComponent()->setTransform(newTransform);
+		app->getModuleAssignment2().getCameraComponent()->recalculateFrustum();
 	}
 
 	ImGui::End();
@@ -341,7 +345,7 @@ void ModuleImGui::showSceneRenderWindow() {
 	// Gizmo
 	Matrix cameraViewMatrix = moduleCameraEditor->getViewMatrix();
 	Matrix cameraProjectionMatrix = moduleCameraEditor->getProjectionMatrix();
-	Matrix* model = &app->getModuleAssignment2().getGameObjects().at(0)->getModelMatrix();
+	Matrix* model = &app->getModuleAssignment2().getCameraComponent()->getModelMatrix();
 	ImGuizmo::SetRect(
 		sceneRenderWindowPos.x + sceneRenderWindowImageRectMin.x,
 		sceneRenderWindowPos.y + sceneRenderWindowImageRectMin.y,
@@ -358,4 +362,25 @@ void ModuleImGui::showSceneRenderWindow() {
 
 bool ModuleImGui::compareVectors(float* v0, float* v1) {
 	return v0[0] == v1[0] && v0[1] == v1[1] && v0[2] == v1[2];
+}
+
+void ModuleImGui::showGameCameraParamsWindow() {
+	ImGui::Begin("Game camera");
+
+	GameObject* cameraGO = app->getModuleAssignment2().getCameraComponent();
+	CameraComponent* camera = dynamic_cast<CameraComponent*>(cameraGO);
+	float fov = camera->getFov();
+	float nearPlane = camera->getNearPlane();
+	float farPlane = camera->getFarPlane();
+	ImGui::DragFloat("FOV", &fov, 1.0f, 5.0f, 120.0f);
+	ImGui::DragFloat("Near plane", &nearPlane, 0.005f, 0.01f, 1.0f);
+	ImGui::DragFloat("Far plane", &farPlane, 1.0f, 10.0f, 100.0f);
+	if (fov != camera->getFov() || nearPlane != camera->getNearPlane() || farPlane != camera->getFarPlane()) {
+		camera->setFov(fov);
+		camera->setNearPlane(nearPlane);
+		camera->setFarPlane(farPlane);
+		camera->recalculateFrustum();
+	}
+
+	ImGui::End();
 }
