@@ -5,6 +5,15 @@
 class Mesh;
 class Material;
 
+struct Frustum {
+	Plane frontFace;
+	Plane backFace;
+	Plane topFace;
+	Plane bottomFace;
+	Plane leftFace;
+	Plane rightFace;
+};
+
 struct MvpCB
 {
 	Matrix mvp;
@@ -22,6 +31,28 @@ struct NormalMatrixCB
 
 struct AABB {
 	Vector3 points[8];
+
+	bool isPointInsidePlane(const Vector3& point, const Plane& plane) {
+		return plane.Normal().Dot(point) + plane.D() < 0;
+	}
+
+	bool isFullyOutsideOfPlane(const Plane& plane) {
+		for (auto& point : points) {
+			if (isPointInsidePlane(point, plane)) {
+				return false;
+			}
+		}
+		return true;
+	}
+
+	bool test(const Frustum& frustum) {
+		return !isFullyOutsideOfPlane(frustum.frontFace)
+			&& !isFullyOutsideOfPlane(frustum.backFace)
+			&& !isFullyOutsideOfPlane(frustum.rightFace)
+			&& !isFullyOutsideOfPlane(frustum.leftFace)
+			&& !isFullyOutsideOfPlane(frustum.topFace)
+			&& !isFullyOutsideOfPlane(frustum.bottomFace);
+	}
 };
 
 class GameObject {

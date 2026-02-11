@@ -1,15 +1,6 @@
 #include "Globals.h"
 #include "GameObject.h"
 
-struct Frustum {
-	Plane frontFace;
-	Plane backFace;
-	Plane topFace;
-	Plane bottomFace;
-	Plane leftFace;
-	Plane rightFace;
-};
-
 class CameraComponent : public GameObject {
 public:
 	CameraComponent();
@@ -40,8 +31,6 @@ public:
 
 	void recalculateFrustum();
 
-	bool test(AABB aabb);
-
 private:
 	float fov = 90.0f;
 	float nearPlane = 1.0f;
@@ -52,9 +41,5 @@ private:
 
 	Frustum frustum = {};
 
-	bool isPointInsideFrustum(Vector3 point);
-
 	Vector3* calculateFrustumVerticesFromFrustum(Vector3 verts[8]);
-
-	bool isPointInsidePlane(Vector3& point, Plane& plane);
 };

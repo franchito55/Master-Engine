@@ -113,15 +113,6 @@ void CameraComponent::recalculateFrustum() {
 	frustum.rightFace = Plane(frustumPoints[0], frustumPoints[3], frustumPoints[7]);
 }
 
-bool CameraComponent::isPointInsideFrustum(Vector3 point) {
-	return isPointInsidePlane(point, frustum.frontFace)
-		&& isPointInsidePlane(point, frustum.backFace)
-		&& isPointInsidePlane(point, frustum.topFace)
-		&& isPointInsidePlane(point, frustum.bottomFace)
-		&& isPointInsidePlane(point, frustum.leftFace)
-		&& isPointInsidePlane(point, frustum.rightFace);
-}
-
 Vector3* CameraComponent::calculateFrustumVerticesFromFrustum(Vector3 verts[8]) {
 	Matrix world =
 		Matrix::CreateFromQuaternion(transform.rotation) *
@@ -158,17 +149,4 @@ Vector3* CameraComponent::calculateFrustumVerticesFromFrustum(Vector3 verts[8]) 
 		verts[i] = points[i];
 	}
 	return verts;
-}
-
-bool CameraComponent::isPointInsidePlane(Vector3& point, Plane& plane) {
-	return plane.Normal().Dot(point) + plane.D() < 0;
-}
-
-bool CameraComponent::test(AABB aabb) {
-	for (auto& point : aabb.points) {
-		if (isPointInsideFrustum(point)) {
-			return true;
-		}
-	}
-	return false;
 }

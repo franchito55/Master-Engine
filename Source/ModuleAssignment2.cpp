@@ -143,7 +143,7 @@ void ModuleAssignment2::render() {
 	commandList->SetGraphicsRootDescriptorTable(3, srvHeap->GetGPUDescriptorHandleForHeapStart());
 
 	for (unsigned int i = 0; i < gameObjects.size()-1; i++) {
-		if (cameraComponent->test(gameObjects.at(i)->getAABB())) {
+		if (gameObjects.at(i)->getAABB().test(cameraComponent->getFrustum())) {
 			gameObjects.at(i)->render(commandList, vBV, iBV);
 		}
 	}
